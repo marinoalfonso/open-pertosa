@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Cos'è Open Pertosa — Comune di Pertosa</title>
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="logo-pertosa.png">
+  <link rel="apple-touch-icon" href="logo-pertosa.png">
+
+  <!-- SEO base -->
+  <meta name="description" content="Open Pertosa è l'assistente documentale sperimentale del Comune di Pertosa. Scopri come funziona, su quali documenti si basa e quali sono i suoi limiti.">
+  <meta name="author" content="Comune di Pertosa">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#14377D">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700&family=Source+Serif+4:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #FFFFFF;
+      --surface: #FFFFFF;
+      --surface-hover: #F4F5F8;
+      --surface-alt: #EAEDF3;
+      --border: #D8DCE3;
+      --border-strong: #AFB5C0;
+      --text: #0A1F4A;
+      --text-secondary: #4A5468;
+      --text-muted: #6B7280;
+      --accent: #14377D;
+      --accent-hover: #0F2A62;
+      --accent-soft: #E3E8F2;
+
+      --font-sans: 'Titillium Web', system-ui, -apple-system, sans-serif;
+      --font-serif: 'Source Serif 4', Georgia, serif;
+
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --max-width: 760px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 16px;
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* ── HEADER (uguale a index.html) ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: calc(14px + env(safe-area-inset-top)) 24px 14px 24px;
+      border-bottom: 1px solid transparent;
+      transition: border-color 0.3s ease;
+      flex-shrink: 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .brand-logo {
+      width: 28px;
+      height: 28px;
+      object-fit: contain;
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.1;
+    }
+
+    .brand-name {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+
+    .brand-sub {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    .back-link {
+      font-size: 0.85rem;
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      transition: background 0.15s;
+    }
+
+    .back-link:hover {
+      background: var(--accent-soft);
+    }
+
+    .back-link svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* ── CONTENUTO ── */
+    .container {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      padding: 56px 24px 80px;
+    }
+
+    .page-title {
+      font-family: var(--font-serif);
+      font-size: clamp(2.2rem, 5vw, 3rem);
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--accent);
+      line-height: 1.1;
+      margin-bottom: 12px;
+    }
+
+    .page-lead {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      line-height: 1.55;
+      margin-bottom: 48px;
+      max-width: 600px;
+    }
+
+    section {
+      margin-bottom: 40px;
+      padding-bottom: 40px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    section:last-of-type {
+      border-bottom: none;
+    }
+
+    h2 {
+      font-family: var(--font-serif);
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.01em;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+
+    h2 .section-num {
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--accent);
+      letter-spacing: 0.05em;
+      flex-shrink: 0;
+    }
+
+    section p {
+      margin-bottom: 14px;
+      color: var(--text);
+    }
+
+    section p:last-child {
+      margin-bottom: 0;
+    }
+
+    section ul {
+      margin: 14px 0;
+      padding-left: 24px;
+    }
+
+    section li {
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      text-decoration-color: var(--border-strong);
+      transition: text-decoration-color 0.15s;
+    }
+
+    a:hover {
+      text-decoration-color: var(--accent);
+    }
+
+    /* Box di evidenza per la sezione "limiti" */
+    .callout {
+      background: var(--accent-soft);
+      border-left: 4px solid var(--accent);
+      padding: 18px 22px;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      margin: 16px 0;
+    }
+
+    .callout p {
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+
+    .callout p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* ── FOOTER ISTITUZIONALE ── */
+    .footer {
+      flex-shrink: 0;
+      padding: 18px 24px calc(18px + env(safe-area-inset-bottom)) 24px;
+      background: var(--accent);
+      text-align: center;
+      font-size: 0.75rem;
+      color: rgba(255, 255, 255, 0.85);
+      line-height: 1.7;
+    }
+  
+      .footer-line {
+        display: block;
+      }
+  
+      .footer a {
+        color: #FFFFFF;
+        text-decoration: none;
+        font-weight: 500;
+        transition: opacity 0.15s;
+      }
+  
+      .footer a:hover {
+        opacity: 0.75;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+  
+      .footer-sep {
+        margin: 0 8px;
+        color: rgba(255, 255, 255, 0.4);
+      }
+  
+      .footer-pending {
+        color: rgba(255, 255, 255, 0.75);
+        cursor: help;
+        border-bottom: 1px dotted rgba(255, 255, 255, 0.4);
+      }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 640px) {
+      .header { padding: 12px 16px; }
+      .container { padding: 40px 20px 60px; }
+      .page-title { font-size: 1.85rem; }
+      .page-lead { font-size: 1rem; margin-bottom: 36px; }
+      h2 { font-size: 1.25rem; flex-direction: column; gap: 4px; align-items: flex-start; }
+      section { margin-bottom: 32px; padding-bottom: 32px; }
+      .footer { padding: 12px 16px; font-size: 0.68rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header">
+    <a href="index.html" class="brand">
+      <img src="logo-pertosa.png" alt="Comune di Pertosa" class="brand-logo" onerror="this.style.display='none'">
+      <div class="brand-text">
+        <span class="brand-name">Open Pertosa</span>
+        <span class="brand-sub">Comune di Pertosa</span>
+      </div>
+    </a>
+    <a href="index.html" class="back-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="19" y1="12" x2="5" y2="12"></line>
+        <polyline points="12 19 5 12 12 5"></polyline>
+      </svg>
+      Torna all'assistente
+    </a>
+  </header>
+
+  <!-- Contenuto -->
+  <main class="container">
+
+    <h1 class="page-title">Cos'è Open Pertosa</h1>
+    <p class="page-lead">
+      Una guida sintetica al servizio: cosa fa, come funziona, cosa può e cosa non può fare.
+    </p>
+
+    <!-- 1. Cos'è -->
+    <section>
+      <h2><span class="section-num">01</span> Il servizio</h2>
+      <p>
+        Open Pertosa è un <strong>assistente documentale sperimentale</strong> del Comune di Pertosa. Permette ai cittadini di consultare bilanci, delibere, determine e altri atti pubblicati dall'amministrazione ponendo domande in linguaggio naturale, senza dover cercare manualmente nei singoli documenti.
+      </p>
+      <p>
+        L'obiettivo è rendere l'amministrazione comunale <strong>più trasparente e accessibile</strong>, abbassando la soglia tecnica necessaria per orientarsi tra gli atti ufficiali pubblicati.
+      </p>
+    </section>
+
+    <!-- 2. Come funziona -->
+    <section>
+      <h2><span class="section-num">02</span> Come funziona</h2>
+      <p>
+        Quando poni una domanda, Open Pertosa cerca nei documenti pubblicati dal Comune i passaggi più rilevanti rispetto alla tua richiesta. Successivamente, un modello di intelligenza artificiale formula una risposta in linguaggio naturale basandosi esclusivamente su quei passaggi.
+      </p>
+      <p>
+        Il sistema <strong>non inventa informazioni</strong> e <strong>non attinge a fonti esterne</strong> al patrimonio documentale del Comune. Se un'informazione non è presente nei documenti consultati, il sistema lo dichiara invece di formulare ipotesi.
+      </p>
+    </section>
+
+    <!-- 3. Documenti consultati -->
+    <section>
+      <h2><span class="section-num">03</span> Documenti consultati</h2>
+      <p>
+        Open Pertosa attualmente consulta le seguenti tipologie di atti pubblicati dal Comune di Pertosa:
+      </p>
+      <ul>
+        <li>Delibere di Giunta e di Consiglio Comunale</li>
+        <li>Determine dirigenziali</li>
+        <li>Bilanci di previsione e consuntivo</li>
+        <li>Ordinanze sindacali</li>
+        <li>Avvisi e bandi pubblici</li>
+        <li>Regolamenti comunali</li>
+      </ul>
+      <p>
+        I documenti provengono dall'<a href="http://www.halleyweb.com/c065093/index.php?servizio=304" target="_blank" rel="noopener">Albo Pretorio</a> e dalla sezione <a href="http://www.halleyweb.com/c065093/zf/index.php/trasparenza/" target="_blank" rel="noopener">Amministrazione Trasparente</a> del Comune.
+      </p>
+      <p>
+        <strong>Non sono inclusi:</strong> documenti riservati, atti precedenti alla data di attivazione del servizio, comunicazioni interne, documenti non pubblicati ufficialmente.
+      </p>
+    </section>
+
+    <!-- 4. Limiti -->
+    <section>
+      <h2><span class="section-num">04</span> Limiti e attendibilità</h2>
+
+      <div class="callout">
+        <p>
+          <strong>Le risposte generate da Open Pertosa non hanno valore legale o amministrativo.</strong> Sono uno strumento di consultazione assistita: per qualsiasi uso formale è necessario consultare il documento ufficiale presso l'Albo Pretorio o gli uffici competenti.
+        </p>
+      </div>
+
+      <p>
+        Trattandosi di un sistema basato su intelligenza artificiale, le risposte possono contenere imprecisioni, omissioni o interpretazioni discutibili. In particolare:
+      </p>
+      <ul>
+        <li>il sistema potrebbe non recuperare il documento più rilevante in tutti i casi;</li>
+        <li>la sintesi generata potrebbe semplificare eccessivamente passaggi tecnici o giuridici;</li>
+        <li>aggiornamenti molto recenti potrebbero non essere ancora indicizzati.</li>
+      </ul>
+      <p>
+        Per qualsiasi dubbio sull'esattezza di una risposta, consulta sempre il documento originale o contatta gli <a href="https://www.comune.pertosa.sa.it/pageobject/Uffici" target="_blank" rel="noopener">uffici comunali</a>.
+      </p>
+    </section>
+
+    <!-- 5. Privacy -->
+    <section>
+      <h2><span class="section-num">05</span> Privacy e trattamento dati</h2>
+      <p>
+        Le domande poste a Open Pertosa vengono elaborate da <strong>Azure OpenAI Service</strong>, un servizio di intelligenza artificiale di Microsoft ospitato in datacenter dell'Unione Europea. Il trattamento è conforme al GDPR.
+      </p>
+      <p>
+        Le conversazioni <strong>non vengono utilizzate per addestrare modelli di intelligenza artificiale</strong> e non sono accessibili a terze parti. Possono essere conservate temporaneamente solo per finalità di sicurezza e diagnostica del servizio.
+      </p>
+      <p>
+        Si raccomanda di <strong>non inserire dati personali</strong> (codice fiscale, dati sanitari, informazioni riservate) nelle domande: il servizio è pensato per la consultazione di documenti pubblici, non per pratiche personali.
+      </p>
+      <p>
+        Per maggiori informazioni consulta l'<a href="https://www.comune.pertosa.sa.it/informative/spf" target="_blank" rel="noopener">informativa privacy del Comune di Pertosa</a>.
+      </p>
+    </section>
+
+    <!-- 6. Chi -->
+    <section>
+      <h2><span class="section-num">06</span> Chi ha realizzato il servizio</h2>
+      <p>
+        Open Pertosa è un progetto sperimentale ideato e sviluppato da <strong>Alfonso Marino</strong>, Data Scientist, nell'ambito di un'iniziativa personale per l'innovazione dei servizi digitali del Comune di Pertosa.
+      </p>
+      <p>
+        Il codice sorgente è pubblicamente disponibile su <a href="https://github.com/marinoalfonso/pertosa-rag" target="_blank" rel="noopener">GitHub</a> con licenza open source.
+      </p>
+      <p>
+        Trattandosi di un servizio in fase sperimentale, il feedback dei cittadini è prezioso. Per <strong>segnalare imprecisioni, suggerire miglioramenti o riportare malfunzionamenti</strong>, 
+        è possibile contattare il Comune attraverso i <a href="https://www.comune.pertosa.sa.it/pagecol/contatti" 
+        target="_blank" rel="noopener">canali ufficiali</a> oppure scrivere direttamente allo sviluppatore 
+        all'indirizzo <a href="mailto:marinoalfonso685@gmail.com">mail</a> o chiamare al <a href="tel:+393802083389">numero</a>.
+      </p>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+      <a href="cos-e-open-pertosa.html">Cos'è Open Pertosa</a>
+      <span class="footer-sep">·</span>
+      <a href="https://www.comune.pertosa.sa.it/informative/spf" target="_blank" rel="noopener">Privacy</a>
+      <span class="footer-sep">·</span>
+      <a href="https://www.comune.pertosa.sa.it/notelegali" target="_blank" rel="noopener">Note legali</a>
+      <span class="footer-sep">·</span>
+      <span class="footer-pending" title="Dichiarazione di accessibilità in corso di redazione, sarà disponibile al lancio ufficiale">Accessibilità</span>
+      <span class="footer-sep">·</span>
+      <a href="https://github.com/marinoalfonso/pertosa-rag" target="_blank" rel="noopener">Codice sorgente</a>
+    </span>
+  </footer>
+
+</body>
+</html>

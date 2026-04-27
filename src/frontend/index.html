@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com;
+    script-src 'self' https://cdnjs.cloudflare.com 'unsafe-inline';
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+    connect-src 'self' http://localhost:8000 http://46.224.190.225;
+    img-src 'self' data:;
+  ">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Open Pertosa — Assistente Documentale del Comune</title>
+
+  <!-- Favicon (usa lo stemma del Comune) -->
+  <link rel="icon" type="image/png" href="logo-pertosa.png">
+  <link rel="apple-touch-icon" href="logo-pertosa.png">
+
+  <!-- SEO base -->
+  <meta name="description" content="L'assistente del Comune di Pertosa per consultare bilanci, delibere e atti ufficiali. Risposte in linguaggio naturale, fonti sempre verificabili.">
+  <meta name="author" content="Comune di Pertosa">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#14377D">
+
+  <!-- Open Graph (anteprima su WhatsApp, Facebook, Telegram, LinkedIn) -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Open Pertosa — Assistente Documentale del Comune">
+  <meta property="og:description" content="L'assistente del Comune di Pertosa per consultare bilanci, delibere e atti ufficiali. Risposte in linguaggio naturale, fonti sempre verificabili.">
+  <meta property="og:image" content="og-card.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Open Pertosa - Assistente Documentale del Comune">
+  <meta property="og:locale" content="it_IT">
+  <meta property="og:site_name" content="Comune di Pertosa">
+
+  <!-- Twitter Card (anteprima su X/Twitter) -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Open Pertosa — Assistente Documentale del Comune">
+  <meta name="twitter:description" content="L'assistente del Comune di Pertosa per consultare bilanci, delibere e atti ufficiali.">
+  <meta name="twitter:image" content="og-card.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700&family=Source+Serif+4:wght@400;500;600&display=swap" rel="stylesheet">  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+  <style>
+    :root {
+      /* Palette Open Pertosa — allineata al sito comunale (rgb 20,55,125) */
+      --bg: #FFFFFF;
+      --surface: #FFFFFF;
+      --surface-hover: #F4F5F8;
+      --surface-alt: #EAEDF3;
+      --border: #D8DCE3;
+      --border-strong: #AFB5C0;
+      --text: #0A1F4A;                  /* blu-nero molto scuro, derivato dall'accento */
+      --text-secondary: #4A5468;
+      --text-muted: #6B7280;
+      --text-placeholder: #A0A8B4;
+
+      /* Accento: blu istituzionale identico al sito comunale */
+      --accent: #14377D;                /* rgb(20, 55, 125) */
+      --accent-hover: #0F2A62;          /* hover ~20% più scuro */
+      --accent-active: #0A1F4A;         /* pressed */
+      --accent-soft: #E3E8F2;           /* tinta chiarissima per highlights */
+
+      /* Bubble utente */
+      --user-bubble: #14377D;
+      --user-text: #FFFFFF;
+
+      /* Typography */
+      --font-sans: 'Titillium web', system-ui, -apple-system, sans-serif;
+      --font-serif: 'Source Serif 4', Georgia, serif;
+
+      /* Layout */
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+      --max-width: 760px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow: hidden;
+    }
+
+    /* ── LAYOUT PRINCIPALE ── */
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      width: 100%;
+    }
+
+    /* ── HEADER MINIMALE ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: calc(14px + env(safe-area-inset-top)) 24px 14px 24px;
+      border-bottom: 1px solid transparent;
+      transition: border-color 0.3s ease;
+      flex-shrink: 0;
+    }
+
+    .app.chat-mode .header {
+      border-bottom-color: var(--border);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-logo {
+      width: 28px;
+      height: 28px;
+      object-fit: contain;
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.1;
+    }
+
+    .brand-name {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+
+    .brand-sub {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    .header-badge {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface);
+      font-weight: 500;
+    }
+
+    /* ── SCHERMATA DI BENVENUTO ── */
+    .welcome {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      transition: opacity 0.35s ease, transform 0.35s ease;
+    }
+
+    .app.chat-mode .welcome {
+      display: none;
+    }
+
+    .welcome-inner {
+      width: 100%;
+      max-width: var(--max-width);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 32px;
+    }
+
+    .welcome-title {
+      font-family: var(--font-serif);
+      font-size: clamp(3.5rem, 8vw, 5.5rem);
+      font-weight: 500;
+      letter-spacing: -0.025em;
+      color: var(--accent);
+      text-align: center;
+      line-height: 1.05;
+      display: inline-block;
+      min-height: 1.05em;
+    }
+
+    .welcome-title-wrap {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+    }
+
+    .typed-text {
+      display: inline;
+    }
+
+    .typed-cursor {
+      display: inline-block;
+      width: 3px;
+      height: 0.85em;
+      background: var(--accent);
+      margin-left: 4px;
+      vertical-align: text-bottom;
+      animation: blink 1s step-end infinite;
+      transform: translateY(-2px);
+    }
+
+    .typed-cursor.fade-out {
+      animation: blink 1s step-end infinite, fadeOut 0.6s ease-out 0.4s forwards;
+    }
+
+    @keyframes blink {
+      0%, 50%   { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+
+    @keyframes fadeOut {
+      to { opacity: 0; visibility: hidden; }
+    }
+
+    .welcome-subtitle {
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      text-align: center;
+      margin-top: -20px;
+      max-width: 540px;
+      line-height: 1.5;
+    }
+
+    /* ── INPUT (BENVENUTO) ── */
+    .welcome-input-wrap {
+      width: 100%;
+      max-width: 720px;
+    }
+
+    /* ── PULSANTI SUGGERITI ── */
+    .suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      width: 100%;
+      max-width: 720px;
+    }
+
+    .suggestion-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      font-weight: 500;
+      padding: 10px 18px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.22s ease;
+      text-align: left;
+      line-height: 1.3;
+      display: inline-flex;
+      align-items: center;
+      gap: 0;
+    }
+
+    .suggestion-btn::after {
+      content: "→";
+      display: inline-block;
+      max-width: 0;
+      opacity: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      transform: translateX(-4px);
+      transition: max-width 0.25s ease, opacity 0.2s ease, transform 0.25s ease, margin-left 0.25s ease;
+      color: var(--accent);
+      font-weight: 600;
+      margin-left: 0;
+    }
+
+    .suggestion-btn:hover {
+      background: var(--surface-hover);
+      border-color: var(--accent);
+      color: var(--text);
+      transform: translateY(-1px);
+    }
+
+    .suggestion-btn:hover::after {
+      max-width: 20px;
+      opacity: 1;
+      transform: translateX(0);
+      margin-left: 8px;
+    }
+
+    .suggestion-btn:active {
+      transform: translateY(0);
+    }
+
+    /* ── AREA CHAT ── */
+    .chat-area {
+      flex: 1;
+      overflow-y: auto;
+      display: none;
+      scroll-behavior: smooth;
+    }
+
+    .app.chat-mode .chat-area {
+      display: block;
+    }
+
+    .chat-area::-webkit-scrollbar { width: 8px; }
+    .chat-area::-webkit-scrollbar-track { background: transparent; }
+    .chat-area::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 999px;
+    }
+    .chat-area::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+
+    .chat-inner {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      padding: 32px 24px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    /* ── MESSAGGI ── */
+    .message {
+      display: flex;
+      flex-direction: column;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .message.user {
+      align-items: flex-end;
+    }
+
+    .message.system {
+      align-items: flex-start;
+    }
+
+    .bubble {
+      font-size: 0.95rem;
+      line-height: 1.65;
+      max-width: 92%;
+    }
+
+    .message.user .bubble {
+      background: var(--user-bubble);
+      color: var(--user-text);
+      padding: 12px 18px;
+      border-radius: var(--radius-lg);
+      border-bottom-right-radius: 4px;
+      max-width: 80%;
+    }
+
+    .message.system .bubble {
+      background: transparent;
+      color: var(--text);
+      padding: 0;
+    }
+
+    /* Markdown */
+    .bubble h1, .bubble h2, .bubble h3 {
+      font-family: var(--font-serif);
+      color: var(--text);
+      margin: 16px 0 8px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+    .bubble h1 { font-size: 1.25rem; }
+    .bubble h2 { font-size: 1.1rem; }
+    .bubble h3 { font-size: 1rem; }
+
+    .bubble p { margin-bottom: 10px; }
+    .bubble p:last-child { margin-bottom: 0; }
+
+    .bubble ul, .bubble ol {
+      padding-left: 22px;
+      margin: 10px 0;
+    }
+    .bubble li { margin-bottom: 6px; }
+
+    .bubble strong { color: var(--text); font-weight: 600; }
+
+    .bubble code {
+      background: var(--surface-hover);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.88em;
+      font-family: 'SF Mono', Consolas, monospace;
+      color: var(--text);
+    }
+
+    .bubble table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+      margin: 12px 0;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+    .bubble th {
+      background: var(--surface-hover);
+      color: var(--text);
+      padding: 9px 12px;
+      text-align: left;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border);
+    }
+    .bubble td {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .bubble tr:last-child td { border-bottom: none; }
+
+    .bubble a {
+      color: var(--text);
+      text-decoration: underline;
+      text-decoration-color: var(--border-strong);
+      text-underline-offset: 3px;
+    }
+    .bubble a:hover {
+      text-decoration-color: var(--text);
+    }
+
+    /* ── AZIONI MESSAGGIO ── */
+    .message-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .action-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      font-family: var(--font-sans);
+      padding: 5px 9px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.15s;
+      font-weight: 500;
+    }
+
+    .action-btn:hover {
+      background: var(--surface-hover);
+      color: var(--text);
+    }
+
+    .action-btn.copied {
+      color: #2F855A;
+    }
+
+    .action-btn svg {
+      width: 13px;
+      height: 13px;
+    }
+
+    .action-btn.regenerating svg {
+      animation: spin 0.9s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+
+    /* ── DISCLAIMER ── */
+    .disclaimer {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .disclaimer svg {
+      flex-shrink: 0;
+    }
+
+    /* ── LOADING ── */
+    .bubble-loading {
+      display: inline-flex !important;
+      align-items: center;
+      background: transparent !important;
+      padding: 4px 0 !important;
+      width: fit-content;
+    }
+
+    .loading-dots {
+      display: flex;
+      gap: 5px;
+    }
+
+    .loading-dots span {
+      width: 7px; height: 7px;
+      background: var(--text-secondary);
+      border-radius: 50%;
+      animation: bounce 1.3s infinite ease-in-out;
+    }
+
+    .loading-dots span:nth-child(2) { animation-delay: 0.15s; }
+    .loading-dots span:nth-child(3) { animation-delay: 0.3s; }
+
+    @keyframes bounce {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.35; }
+      30%           { transform: translateY(-5px); opacity: 1; }
+    }
+
+    /* ── INPUT BOX (UNIFICATA) ── */
+    .input-wrap {
+      width: 100%;
+      max-width: var(--max-width);
+      margin: 0 auto;
+      padding: 0 24px;
+      flex-shrink: 0;
+    }
+
+    .input-wrap.bottom {
+      padding-bottom: 16px;
+      padding-top: 8px;
+    }
+
+    .input-box {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 16px 56px 16px 20px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+    }
+
+    .input-box:focus-within {
+      border-color: var(--text-secondary);
+      box-shadow: 0 0 0 3px rgba(28, 25, 23, 0.06);
+    }
+
+    .input-box textarea {
+      width: 100%;
+      border: none;
+      outline: none;
+      background: transparent;
+      font-family: var(--font-sans);
+      font-size: 1rem;
+      color: var(--text);
+      resize: none;
+      line-height: 1.5;
+      max-height: 200px;
+      min-height: 24px;
+      overflow-y: auto;
+      display: block;
+      padding: 0;
+      margin: 0;
+      box-shadow: none;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .input-box textarea::placeholder {
+      color: var(--text-placeholder);
+    }
+
+    .input-box textarea::-webkit-scrollbar { width: 6px; }
+    .input-box textarea::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
+
+    .input-box button {
+      position: absolute;
+      right: 10px;
+      bottom: 10px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, transform 0.1s, opacity 0.2s;
+    }
+
+    .input-box button:hover:not(:disabled) {
+      background: var(--accent-hover);
+    }
+
+    .input-box button:active:not(:disabled) {
+      transform: scale(0.95);
+    }
+
+    .input-box button:disabled {
+      background: var(--border-strong);
+      cursor: not-allowed;
+    }
+
+    .input-box button svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+
+    .input-hint {
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 8px;
+      padding: 0 8px;
+    }
+
+    /* ── FOOTER ISTITUZIONALE ── */
+    .footer {
+      flex-shrink: 0;
+      padding: 18px 24px calc(18px + env(safe-area-inset-bottom)) 24px;
+      background: var(--accent);
+      text-align: center;
+      font-size: 0.75rem;
+      color: rgba(255, 255, 255, 0.85);
+      line-height: 1.7;
+    }
+
+    .footer-line {
+      display: block;
+    }
+
+    .footer a {
+      color: #FFFFFF;
+      text-decoration: none;
+      font-weight: 500;
+      transition: opacity 0.15s;
+    }
+
+    .footer a:hover {
+      opacity: 0.75;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    .footer-sep {
+      margin: 0 8px;
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    .footer-pending {
+      color: rgba(255, 255, 255, 0.75);
+      cursor: help;
+      border-bottom: 1px dotted rgba(255, 255, 255, 0.4);
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 640px) {
+      .header { padding: 12px 16px; }
+      .welcome { padding: 16px; }
+      .welcome-inner { gap: 24px; }
+      .welcome-title { font-size: 2.25rem; }
+      .welcome-subtitle { font-size: 0.88rem; }
+      .chat-inner { padding: 20px 16px; }
+      .input-wrap { padding: 0 16px; }
+      .input-wrap.bottom { padding-bottom: 12px; }
+      .input-box { padding: 14px 50px 14px 18px; }
+      .suggestions { gap: 8px; }
+      .suggestion-btn { font-size: 0.8rem; padding: 9px 14px; }
+      .header-badge { display: none; }
+      .footer { padding: 12px 16px; font-size: 0.68rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- Header minimale -->
+  <header class="header">
+    <div class="brand">
+      <img src="logo-pertosa.png" alt="Comune di Pertosa" class="brand-logo" onerror="this.style.display='none'">
+      <div class="brand-text">
+        <span class="brand-name">Assistente Documentale</span>
+        <span class="brand-sub">Comune di Pertosa</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Schermata di benvenuto -->
+  <div class="welcome" id="welcome">
+    <div class="welcome-inner">
+      <h1 class="welcome-title">
+        <span class="typed-text" id="typed-text"></span><span class="typed-cursor" id="typed-cursor"></span>
+      </h1>
+      <p class="welcome-subtitle">L'assistente documentale del Comune di Pertosa. Fai una domanda in linguaggio naturale sui documenti ufficiali pubblicati.</p>
+
+      <!-- Input centrale -->
+      <div class="welcome-input-wrap">
+        <div class="input-box">
+          <textarea
+            id="question-input"
+            placeholder="Buongiorno, in cosa posso esserti utile?"
+            rows="1"
+            maxlength="500"
+            autocomplete="off"
+          ></textarea>
+          <button id="send-btn" disabled aria-label="Invia">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3.4 20.4l17.45-7.48a1 1 0 0 0 0-1.84L3.4 3.6a1 1 0 0 0-1.39 1.18L4 11l8 1-8 1-1.99 6.22a1 1 0 0 0 1.39 1.18z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Pulsanti suggeriti -->
+      <div class="suggestions">
+        <button class="suggestion-btn" data-question="Chi è il sindaco di Pertosa?">
+          Chi è il sindaco di Pertosa?
+        </button>
+        <button class="suggestion-btn" data-question="Quando avranno luogo le elezioni comunali?">
+          Quando avranno luogo le elezioni comunali?
+        </button>
+        <button class="suggestion-btn" data-question="Quali determine sono state pubblicate questo mese?">
+          Quali determine sono state pubblicate questo mese?
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Area chat (nascosta inizialmente) -->
+  <div class="chat-area" id="chat-area">
+    <div class="chat-inner" id="chat-inner"></div>
+  </div>
+
+  <!-- Input area (in basso, in modalità chat) -->
+  <div class="input-wrap bottom" id="input-bottom" style="display: none;">
+    <div class="input-box">
+      <textarea
+        id="question-input-bottom"
+        placeholder="Scrivi la tua domanda…"
+        rows="1"
+        maxlength="500"
+        autocomplete="off"
+      ></textarea>
+      <button id="send-btn-bottom" disabled aria-label="Invia">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3.4 20.4l17.45-7.48a1 1 0 0 0 0-1.84L3.4 3.6a1 1 0 0 0-1.39 1.18L4 11l8 1-8 1-1.99 6.22a1 1 0 0 0 1.39 1.18z"/>
+        </svg>
+      </button>
+    </div>
+    <div class="input-hint">Le risposte si basano su atti pubblici. Verifica sempre il documento originale.</div>
+  </div>
+  <!-- Footer istituzionale -->
+  <footer class="footer">
+      <a href="cos-e-open-pertosa.html">Cos'è Open Pertosa</a>
+      <span class="footer-sep">·</span>
+      <a href="https://www.comune.pertosa.sa.it/informative/spf" target="_blank" rel="noopener">Privacy</a>
+      <span class="footer-sep">·</span>
+      <a href="https://www.comune.pertosa.sa.it/notelegali" target="_blank" rel="noopener">Note legali</a>
+      <span class="footer-sep">·</span>
+      <span class="footer-pending" title="Dichiarazione di accessibilità in corso di redazione, sarà disponibile al lancio ufficiale">Accessibilità</span>
+      <span class="footer-sep">·</span>
+      <a href="https://github.com/marinoalfonso/pertosa-rag" target="_blank" rel="noopener">Codice sorgente</a>
+    </span>
+  </footer>
+</div>
+
+<script>
+  // const API_URL = "http://46.224.190.225/ask";
+  const API_URL = "http://localhost:8000/ask";
+
+  const app           = document.getElementById("app");
+  const welcome       = document.getElementById("welcome");
+  const chatArea      = document.getElementById("chat-area");
+  const chatInner     = document.getElementById("chat-inner");
+  const inputBottom   = document.getElementById("input-bottom");
+
+  // Input "welcome" e "bottom" sincronizzati
+  const inputWelcome  = document.getElementById("question-input");
+  const inputBot      = document.getElementById("question-input-bottom");
+  const sendWelcome   = document.getElementById("send-btn");
+  const sendBot       = document.getElementById("send-btn-bottom");
+
+  let fullResponseText = "";
+  let conversationHistory = [];
+  let inChatMode = false;
+
+  /* ───── AUTO-RESIZE TEXTAREA ───── */
+  function autoResize(textarea) {
+    textarea.style.height = "auto";
+    textarea.style.height = Math.min(textarea.scrollHeight, 200) + "px";
+  }
+
+  function setupTextarea(textarea, sendBtn) {
+    textarea.addEventListener("input", () => {
+      autoResize(textarea);
+      sendBtn.disabled = textarea.value.trim().length === 0;
+    });
+
+    textarea.addEventListener("keydown", e => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        if (!sendBtn.disabled) sendQuestion(textarea.value);
+      }
+    });
+  }
+
+  setupTextarea(inputWelcome, sendWelcome);
+  setupTextarea(inputBot, sendBot);
+
+  sendWelcome.addEventListener("click", () => sendQuestion(inputWelcome.value));
+  sendBot.addEventListener("click", () => sendQuestion(inputBot.value));
+
+  /* ───── PULSANTI SUGGERITI ───── */
+  document.querySelectorAll(".suggestion-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const question = btn.dataset.question;
+      sendQuestion(question);
+    });
+  });
+
+  /* ───── TRANSIZIONE WELCOME -> CHAT ───── */
+  function enterChatMode() {
+    if (inChatMode) return;
+    inChatMode = true;
+    app.classList.add("chat-mode");
+    inputBottom.style.display = "block";
+    setTimeout(() => inputBot.focus(), 100);
+  }
+
+  /* ───── STREAMING FLUIDO (buffer + typewriter loop) ─────
+     I token arrivano dal backend a velocità irregolare. Invece di
+     renderizzare ogni token appena arriva, li accumuliamo in un buffer
+     di caratteri e un loop a 60fps pesca N caratteri per frame.
+     Risultato: scorrimento costante anche con burst irregolari dal server. */
+
+  let charBuffer = "";          // caratteri ancora da mostrare
+  let displayedText = "";       // testo già renderizzato nel bubble
+  let typewriterRunning = false;
+  let streamFinished = false;   // il backend ha finito di mandare token?
+  let activeBubble = null;
+  let lastFrameTime = 0;
+
+  // Velocità adattiva: se il buffer cresce molto, accelera per non rimanere indietro
+  function getCharsPerFrame() {
+    const lag = charBuffer.length;
+    if (lag > 400) return 12;   // recupero veloce se siamo molto indietro
+    if (lag > 150) return 6;
+    if (lag > 50)  return 3;
+    return 2;                    // velocità "naturale" di lettura
+  }
+
+  function typewriterLoop(now) {
+    if (!activeBubble) {
+      typewriterRunning = false;
+      return;
+    }
+
+    // Throttle a ~60fps (16ms) per coerenza
+    if (now - lastFrameTime >= 16) {
+      lastFrameTime = now;
+
+      const charsThisFrame = getCharsPerFrame();
+      if (charBuffer.length > 0) {
+        const chunk = charBuffer.slice(0, charsThisFrame);
+        charBuffer = charBuffer.slice(charsThisFrame);
+        displayedText += chunk;
+
+        // Render markdown del testo accumulato finora
+        activeBubble.innerHTML = marked.parse(displayedText);
+
+        // Auto-scroll solo se l'utente è già in fondo (non disturbare se sta leggendo sopra)
+        const nearBottom = chatArea.scrollHeight - chatArea.scrollTop - chatArea.clientHeight < 100;
+        if (nearBottom) {
+          chatArea.scrollTop = chatArea.scrollHeight;  // resta secco durante lo streaming
+        }
+      }
+
+      // Stop quando il backend ha finito E il buffer è vuoto
+      if (streamFinished && charBuffer.length === 0) {
+        typewriterRunning = false;
+        activeBubble = null;
+        return;
+      }
+    }
+
+    requestAnimationFrame(typewriterLoop);
+  }
+
+  function startTypewriter(bubble) {
+    activeBubble = bubble;
+    charBuffer = "";
+    displayedText = "";
+    streamFinished = false;
+    if (!typewriterRunning) {
+      typewriterRunning = true;
+      lastFrameTime = 0;
+      requestAnimationFrame(typewriterLoop);
+    }
+  }
+
+  function pushTokens(token) {
+    charBuffer += token;
+  }
+
+  function finishStream() {
+    streamFinished = true;
+  }
+
+  /* ───── ACTIONS BUTTONS (Copia + Rigenera) ───── */
+  function addCopyButton(msg, getText) {
+    const actions = document.createElement("div");
+    actions.className = "message-actions";
+
+    // ── COPIA ──
+    const copyBtn = document.createElement("button");
+    copyBtn.className = "action-btn";
+    copyBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+      </svg>
+      Copia`;
+
+    copyBtn.addEventListener("click", () => {
+      const text = getText();
+      navigator.clipboard.writeText(text).then(() => {
+        copyBtn.classList.add("copied");
+        copyBtn.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          Copiato`;
+        setTimeout(() => {
+          copyBtn.classList.remove("copied");
+          copyBtn.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            Copia`;
+        }, 2500);
+      });
+    });
+
+    // ── RIGENERA ──
+    const regenBtn = document.createElement("button");
+    regenBtn.className = "action-btn";
+    regenBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"></polyline>
+        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+      </svg>
+      Rigenera`;
+
+    regenBtn.addEventListener("click", () => regenerateLastResponse(msg, regenBtn));
+
+    actions.appendChild(copyBtn);
+    actions.appendChild(regenBtn);
+    msg.appendChild(actions);
+  }
+
+  /* ───── RIGENERA ULTIMA RISPOSTA ───── */
+  async function regenerateLastResponse(currentMsg, regenBtn) {
+    // Trova l'ultima domanda dell'utente nella cronologia
+    if (conversationHistory.length < 2) return;
+    const lastUserMsg = conversationHistory[conversationHistory.length - 2];
+    if (!lastUserMsg || lastUserMsg.role !== "user") return;
+    const question = lastUserMsg.content;
+
+    // Feedback visivo: icona ruota durante la rigenerazione
+    regenBtn.classList.add("regenerating");
+    regenBtn.disabled = true;
+
+    // Rimuovi il messaggio assistente corrente dalla DOM
+    currentMsg.remove();
+
+    // Rimuovi gli ultimi 2 elementi della cronologia (user + assistant)
+    // così la rigenerazione parte dallo stesso stato di prima
+    conversationHistory.pop();  // rimuove l'assistant
+    conversationHistory.pop();  // rimuove l'user (verrà ri-aggiunto da sendQuestionInternal)
+
+    // Lancia di nuovo la richiesta — passando true per saltare la creazione del bubble utente
+    await sendQuestionInternal(question, true);
+  }
+
+  /* ───── LOADING ───── */
+  function addLoading() {
+    const wrap = document.createElement("div");
+    wrap.className = "message system";
+    wrap.id = "loading";
+    wrap.innerHTML = `
+      <div class="bubble bubble-loading">
+        <div class="loading-dots">
+          <span></span><span></span><span></span>
+        </div>
+      </div>`;
+    chatInner.appendChild(wrap);
+    chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: 'smooth' });
+    return wrap;
+  }
+
+  function addMessage(role, text) {
+    const msg = document.createElement("div");
+    msg.className = `message ${role}`;
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    bubble.textContent = text;
+    msg.appendChild(bubble);
+
+    chatInner.appendChild(msg);
+    chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: 'smooth' });
+    return bubble;
+  }
+
+  async function sendQuestion(rawQuestion) {
+    return sendQuestionInternal(rawQuestion, false);
+  }
+
+  async function sendQuestionInternal(rawQuestion, isRegeneration) {
+    const question = (rawQuestion || "").trim();
+    if (!question) return;
+
+    enterChatMode();
+
+    fullResponseText = "";
+
+    // Reset input
+    inputWelcome.value = "";
+    inputBot.value = "";
+    autoResize(inputWelcome);
+    autoResize(inputBot);
+    sendWelcome.disabled = true;
+    sendBot.disabled = true;
+
+    // Mostra il bubble utente solo se NON è una rigenerazione
+    // (in caso di rigenerazione, il bubble della domanda è già a schermo)
+    if (!isRegeneration) {
+      const userMsg = document.createElement("div");
+      userMsg.className = "message user";
+      const userBubble = document.createElement("div");
+      userBubble.className = "bubble";
+      userBubble.textContent = question;
+      userMsg.appendChild(userBubble);
+      chatInner.appendChild(userMsg);
+      chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: 'smooth' });
+    }
+
+    const loading = addLoading();
+
+    try {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question, history: conversationHistory })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server error ${response.status}`);
+      }
+
+      // Stream
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let rawText = "";
+      let bubble = null;
+      let msg = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const text = decoder.decode(value);
+        const lines = text.split("\n");
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const data = line.slice(6);
+          if (data === "[DONE]") break;
+
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.type === "token") {
+              if (!bubble) {
+                loading.remove();
+                msg = document.createElement("div");
+                msg.className = "message system";
+                bubble = document.createElement("div");
+                bubble.className = "bubble";
+                msg.appendChild(bubble);
+                chatInner.appendChild(msg);
+                startTypewriter(bubble);
+              }
+              rawText += parsed.content;
+              pushTokens(parsed.content);
+            }
+          } catch {}
+        }
+      }
+
+      finishStream();
+
+      if (!bubble) {
+        loading.remove();
+        addMessage("system", "Nessuna risposta ricevuta dal server.");
+        return;
+      }
+      fullResponseText = rawText;
+
+      await new Promise(resolve => {
+        const checkDone = () => {
+          if (!typewriterRunning) resolve();
+          else setTimeout(checkDone, 50);
+        };
+        checkDone();
+      });
+
+      if (msg) addCopyButton(msg, () => fullResponseText);
+
+      conversationHistory.push({ role: "user", content: question });
+      conversationHistory.push({ role: "assistant", content: fullResponseText });
+      if (conversationHistory.length > 20) {
+        conversationHistory = conversationHistory.slice(-20);
+      }
+
+    } catch (error) {
+      loading.remove();
+      finishStream();
+      addMessage("system", interpretError(error));
+    }
+
+    inputBot.focus();
+  }
+
+  /* ───── INTERPRETAZIONE ERRORI ───── */
+  function interpretError(error) {
+    const msg = String(error?.message || error || "").toLowerCase();
+
+    // Errori di rete a livello di trasporto (server irraggiungibile)
+    if (msg.includes("failed to fetch") || msg.includes("networkerror") || msg.includes("load failed")) {
+      return "Impossibile contattare il servizio. Controlla la tua connessione internet o riprova tra qualche minuto.";
+    }
+
+    // Timeout
+    if (msg.includes("timeout") || msg.includes("aborted")) {
+      return "Il servizio sta impiegando più del solito a rispondere. Puoi riprovare oppure semplificare la domanda.";
+    }
+
+    // Rate limit
+    if (msg.includes("429") || msg.includes("too many")) {
+      return "Hai inviato troppe domande in poco tempo. Attendi qualche secondo e riprova.";
+    }
+
+    // Errori server lato backend (5xx)
+    if (msg.includes("500") || msg.includes("502") || msg.includes("503") || msg.includes("504")) {
+      return "Il servizio ha riscontrato un problema temporaneo. Riprova tra qualche minuto.";
+    }
+
+    // Server non disponibile (è il messaggio del nostro throw)
+    if (msg.includes("server non disponibile") || msg.includes("non disponibile")) {
+      return "Il servizio non è momentaneamente disponibile. Riprova tra qualche minuto.";
+    }
+
+    // Fallback generico
+    return "Si è verificato un imprevisto. Riprova a porre la domanda.";
+  }
+
+  /* ───── EFFETTO TYPEWRITER PER IL TITOLO + SALUTO NEL PLACEHOLDER ───── */
+  function getGreeting() {
+    const hour = new Date().getHours();
+    if (hour >= 5  && hour < 12) return "Buongiorno";
+    if (hour >= 12 && hour < 18) return "Buon pomeriggio";
+    if (hour >= 18 && hour < 23) return "Buonasera";
+    return "Ciao";
+  }
+
+  function applyGreetingPlaceholder() {
+    const greeting = getGreeting();
+    const placeholder = `${greeting}, in cosa posso esserti utile?`;
+    if (inputWelcome) inputWelcome.placeholder = placeholder;
+  }
+
+  function typewriterTitle(text, speedMs = 130) {
+    const target = document.getElementById("typed-text");
+    const cursor = document.getElementById("typed-cursor");
+    if (!target) return;
+
+    let i = 0;
+    const tick = () => {
+      if (i < text.length) {
+        target.textContent += text.charAt(i);
+        i++;
+        const variance = Math.random() * 40 - 20;
+        setTimeout(tick, speedMs + variance);
+      } else {
+        setTimeout(() => cursor && cursor.classList.add("fade-out"), 1200);
+      }
+    };
+
+    setTimeout(tick, 250);
+  }
+
+  applyGreetingPlaceholder();
+  typewriterTitle("Open Pertosa");
+
+  // Focus iniziale sull'input di benvenuto
+  setTimeout(() => inputWelcome.focus(), 100);
+</script>
+
+</body>
+</html>
