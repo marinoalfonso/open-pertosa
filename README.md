@@ -4,6 +4,8 @@ Sistema RAG (Retrieval-Augmented Generation) per la consultazione in linguaggio 
 
 Il progetto nasce come iniziativa civica personale con l'obiettivo di rendere il patrimonio documentale della pubblica amministrazione — bilanci, delibere, determine, regolamenti — accessibile a qualsiasi cittadino senza competenze tecniche o giuridiche.
 
+![Interfaccia di Open Pertosa](assets/interfaccia.png)
+
 ---
 
 ## Il problema
