@@ -220,7 +220,7 @@ docker run -d --name qdrant --restart always \
 
 | Problema | Stato |
 |---|---|
-| Tabelle numeriche complesse (bilanci) | Parziale — testo estratto ma struttura riga/colonna può perdersi |
+| Sensibilità alla formulazione della domanda | Retrieval semantico non sempre robusto su query molto specifiche — riformulare in termini più generali risolve nella maggior parte dei casi |
 | Tabelle presenze con segni grafici (X) | Non risolto — i segni sono pixel, non testo |
 | Data residency EU (GDPR formale) | Pianificato — migrazione Azure OpenAI EU all'adozione ufficiale |
 
@@ -244,7 +244,5 @@ Rilasciato sotto licenza **GNU Affero General Public License v3.0 (AGPL-3.0)**, 
 
 ## Autore
 
-**Alfonso Marino** — Data Scientist  
+**Alfonso Marino**
 [github.com/marinoalfonso](https://github.com/marinoalfonso)
-
-Progetto civico per il Comune di Pertosa, Provincia di Salerno.
