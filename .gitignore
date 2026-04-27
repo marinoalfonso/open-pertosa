@@ -4,6 +4,10 @@ data/
 __pycache__/
 *.pyc
 *.pyo
+src/ingestion/qdrant_storage/
 .DS_Store
+*.egg-info/
+dist/
+build/
 qdrant_storage/
-comandi_manutenzione
+comandi_manutenzione.md
