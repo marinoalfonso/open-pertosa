@@ -8,6 +8,7 @@ from pathlib import Path
 from openai import OpenAI
 from dotenv import load_dotenv
 import os
+from prometheus_fastapi_instrumentator import Instrumentator
 
 load_dotenv()
 
@@ -79,6 +80,8 @@ app = FastAPI(
     description="Sistema RAG per la consultazione dei documenti comunali",
     version="0.1.0"
 )
+
+Instrumentator().instrument(app).expose(app)
 
 app.add_middleware(
     CORSMiddleware,
