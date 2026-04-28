@@ -11,3 +11,4 @@ dist/
 build/
 qdrant_storage/
 comandi_manutenzione.md
+monitoring/.env
