@@ -94,17 +94,24 @@ La migrazione da prototipo a produzione richiede principalmente l'aggiornamento 
 ```
 pertosa-rag/
 ├── src/
-│   ├── api.py                       # FastAPI — endpoint RAG con streaming
+│   ├── api.py                       # FastAPI — endpoint RAG con streaming + metriche Prometheus
 │   ├── ingestion/
-│   │   ├── parser.py                # Estrazione testo PDF con fallback OCR
+│   │   ├── parser.py                # Estrazione testo PDF con fallback OCR (PyMuPDF + PyMuPDF4LLM)
 │   │   ├── chunker.py               # Chunking con overlap semantico
 │   │   ├── vectorizer.py            # Embedding e upsert su Qdrant
 │   │   └── run_ingestion.py         # Entrypoint pipeline di ingestion
 │   ├── retrieval/
 │   │   └── retriever.py             # Ricerca semantica su Qdrant
 │   └── frontend/
-│       ├── index.html               # Interfaccia chat (streaming, markdown)
-│       └── cos-e-open-pertosa.html  # Pagina informativa per i cittadini
+│       ├── index.html               # Interfaccia chat (streaming, markdown, typewriter)
+│       ├── cos-e-open-pertosa.html  # Pagina informativa per i cittadini
+│       └── logo-pertosa.png         # Logo ufficiale del Comune di Pertosa
+├── monitoring/
+│   ├── docker-compose.yml           # Stack Prometheus + Grafana + Node Exporter
+│   └── prometheus.yml               # Configurazione scrape targets
+├── deployment/
+│   └── nginx.conf                   # Configurazione Nginx — reverse proxy
+├── LICENSE                          # GNU AGPL-3.0
 ├── requirements.txt
 └── .gitignore
 ```
@@ -215,6 +222,39 @@ docker run -d --name qdrant --restart always \
 # Configura /etc/systemd/system/pertosa-rag.service
 # Configura /etc/nginx/sites-available/pertosa-rag
 ```
+---
+
+## Monitoring
+
+Il sistema include uno stack di monitoring basato su Prometheus e Grafana.
+
+### Componenti
+
+| Componente | Ruolo |
+|---|---|
+| Prometheus | Raccolta metriche — scrape ogni 15 secondi, retention 30 giorni |
+| Grafana | Visualizzazione dashboard |
+| Node Exporter | Metriche di sistema — CPU, RAM, disco |
+| prometheus-fastapi-instrumentator | Metriche HTTP esposte da FastAPI su `/metrics` |
+
+### Avvio
+
+```bash
+cd monitoring
+docker compose up -d
+```
+
+### Accesso a Grafana
+
+Grafana non è esposto pubblicamente. Accedi tramite tunnel SSH:
+
+```bash
+ssh -L 3000:localhost:3000 root@<server-ip>
+```
+
+Poi apri `http://localhost:3000` nel browser.
+
+Credenziali: `admin` / password definita in `monitoring/.env`
 
 ---
 
