@@ -108,7 +108,11 @@ Regole:
   Se usi più fonti: (Fonti: nome_file1.pdf p.X, nome_file2.pdf p.Y)
   Non usare mai "Fonte 1", "Fonte 2" o riferimenti numerici anonimi.
 - Formatta le risposte in modo chiaro usando elenchi e grassetto quando utile
-- Sii preciso, conciso e completo nelle risposte, evitando ambiguità o mancanze di informazione"""
+- Sii preciso, conciso e completo nelle risposte, evitando ambiguità o mancanze di informazione
+- Quando la domanda riguarda un elenco (lavori, delibere, atti, interventi, 
+  appalti, forniture), recupera e riporta TUTTE le informazioni presenti 
+  nel contesto fornito, senza omettere voci. Non fermarti alla prima 
+  corrispondenza trovata."""
 
 
 class Message(BaseModel):

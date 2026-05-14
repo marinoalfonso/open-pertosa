@@ -7,7 +7,7 @@ load_dotenv()
 
 COLLECTION_NAME = "pertosa_docs"
 EMBEDDING_MODEL = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
-TOP_K = 10  # numero di chunk da recuperare per ogni domanda
+TOP_K = 25  # numero di chunk da recuperare per ogni domanda
 
 #openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 #qdrant_client = QdrantClient(host="localhost", port=6333)
