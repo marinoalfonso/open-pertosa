@@ -49,5 +49,16 @@ def retrieve(query: str) -> list[dict]:
             "page": r.payload["page"],
             "score": round(r.score, 3)
         })
+        
+    # ───── DEBUG RETRIEVAL (temporaneo) ─────
+    # Stampa posizione, score, file e prime parole di ogni chunk recuperato.
+    # Da rimuovere dopo aver completato la diagnosi.
+    print(f"\n[retrieval] query={query!r}")
+    print(f"[retrieval] {len(chunks)} chunk recuperati su top_k={TOP_K}")
+    for i, c in enumerate(chunks):
+        preview = c["text"][:100].replace("\n", " ")
+        print(f"[retrieval] #{i:02d} score={c['score']:.3f} "
+              f"file={c['source']} pag={c['page']} | {preview}...")
+    print("[retrieval] ─" * 20, flush=True)
 
     return chunks
