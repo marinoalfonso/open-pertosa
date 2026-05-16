@@ -7,6 +7,7 @@
     script-src 'self' https://cdnjs.cloudflare.com 'unsafe-inline';
     style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
     connect-src 'self' http://localhost:8000 http://46.224.190.225;
+    frame-src 'self';
     img-src 'self' data:;
   ">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -668,6 +669,140 @@
       border-bottom: 1px dotted rgba(255, 255, 255, 0.4);
     }
 
+    /* ── CITAZIONE FONTI — link al PDF ── */
+    .bubble a.source-link {
+      color: var(--accent);
+      text-decoration-color: var(--accent);
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .bubble a.source-link:hover {
+      text-decoration-color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 3px;
+    }
+
+    /* ── PANNELLO PDF (stile iOS sheet) ── */
+    .pdf-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 31, 74, 0.45);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.28s ease;
+    }
+    .pdf-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .pdf-sheet {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 92vh;
+      background: var(--surface);
+      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+      box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.25);
+      z-index: 1001;
+      display: flex;
+      flex-direction: column;
+      transform: translateY(100%);
+      transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+    }
+    .pdf-overlay.open .pdf-sheet {
+      transform: translateY(0);
+    }
+
+    .pdf-sheet-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      gap: 12px;
+    }
+
+    .pdf-sheet-grabber {
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 38px;
+      height: 5px;
+      border-radius: 999px;
+      background: var(--border-strong);
+      /* la maniglia stessa non intercetta gli eventi:
+         il drag è gestito da tutta la barra superiore */
+      pointer-events: none;
+    }
+
+    /* La barra superiore è la zona afferrabile per il drag */
+    .pdf-sheet-header {
+      cursor: grab;
+      touch-action: none;  /* impedisce allo scroll del browser di rubare il gesto */
+      user-select: none;
+    }
+    .pdf-sheet-header:active {
+      cursor: grabbing;
+    }
+
+    /* Durante il trascinamento disattiviamo la transition,
+       così il pannello segue il dito senza ritardo elastico */
+    .pdf-sheet.dragging {
+      transition: none;
+    }
+
+    .pdf-sheet-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 4px;
+    }
+
+    .pdf-sheet-close {
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: none;
+      background: var(--surface-hover);
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+      margin-top: 4px;
+    }
+    .pdf-sheet-close:hover {
+      background: var(--surface-alt);
+      color: var(--text);
+    }
+    .pdf-sheet-close svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .pdf-sheet-body {
+      flex: 1;
+      overflow: hidden;
+      background: var(--surface-alt);
+    }
+    .pdf-sheet-body iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
     /* ── RESPONSIVE ── */
     @media (max-width: 640px) {
       .header { padding: 12px 16px; }
@@ -735,8 +870,8 @@
         <button class="suggestion-btn" data-question="Quando avranno luogo le elezioni comunali?">
           Quando avranno luogo le elezioni comunali?
         </button>
-        <button class="suggestion-btn" data-question="Quali determine sono state pubblicate questo mese?">
-          Quali determine sono state pubblicate questo mese?
+        <button class="suggestion-btn" data-question="Quali lavori sono in corso attualmente a Pertosa?">
+          Quali lavori sono in corso attualmente a Pertosa?
         </button>
       </div>
     </div>
@@ -778,10 +913,28 @@
       <a href="https://github.com/marinoalfonso/open-pertosa" target="_blank" rel="noopener">Codice sorgente</a>
     </span>
   </footer>
+  <!-- Pannello PDF (stile iOS sheet) -->
+  <div class="pdf-overlay" id="pdf-overlay">
+    <div class="pdf-sheet" role="dialog" aria-modal="true" aria-label="Anteprima documento">
+      <div class="pdf-sheet-grabber"></div>
+      <div class="pdf-sheet-header">
+        <span class="pdf-sheet-title" id="pdf-sheet-title">Documento</span>
+        <button class="pdf-sheet-close" id="pdf-sheet-close" aria-label="Chiudi anteprima">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="pdf-sheet-body">
+        <iframe id="pdf-sheet-frame" title="Anteprima PDF"></iframe>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
-  const API_URL = "http://localhost:8000/ask";
+  const API_URL = "/ask";
 
   const app           = document.getElementById("app");
   const welcome       = document.getElementById("welcome");
@@ -798,6 +951,104 @@
   let fullResponseText = "";
   let conversationHistory = [];
   let inChatMode = false;
+  /* ───── PANNELLO PDF ───── */
+  const pdfOverlay   = document.getElementById("pdf-overlay");
+  const pdfFrame     = document.getElementById("pdf-sheet-frame");
+  const pdfTitle     = document.getElementById("pdf-sheet-title");
+  const pdfCloseBtn  = document.getElementById("pdf-sheet-close");
+
+  function openPdfPanel(filename, page) {
+    pdfTitle.textContent = page ? `${filename} — pagina ${page}` : filename;
+    // #page=N apre il PDF alla pagina giusta nei viewer nativi
+    pdfFrame.src = `/docs/${encodeURIComponent(filename)}#page=${page || 1}`;
+    pdfOverlay.classList.add("open");
+    document.body.style.overflow = "hidden";  // blocca lo scroll di fondo
+  }
+
+  function closePdfPanel() {
+    pdfOverlay.classList.remove("open");
+    document.body.style.overflow = "";
+    // Liberiamo l'iframe dopo la transizione, così il PDF non resta in memoria
+    setTimeout(() => { pdfFrame.src = "about:blank"; }, 350);
+  }
+
+  pdfCloseBtn.addEventListener("click", closePdfPanel);
+  // Tap sullo sfondo scuro → chiude (come gli sheet iOS)
+  pdfOverlay.addEventListener("click", e => {
+    if (e.target === pdfOverlay) closePdfPanel();
+  });
+  // Tasto ESC → chiude
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && pdfOverlay.classList.contains("open")) closePdfPanel();
+  });
+
+  /* ───── DRAG-TO-DISMISS DEL PANNELLO PDF ─────
+     Il pannello si trascina afferrando la barra superiore.
+     Si chiude se trascinato oltre il 35% dell'altezza, oppure
+     con un gesto veloce verso il basso (flick). */
+
+  const pdfSheet   = document.querySelector(".pdf-sheet");
+  const pdfHeader  = document.getElementById("pdf-sheet-close").closest(".pdf-sheet-header");
+
+  let dragActive   = false;
+  let dragStartY   = 0;      // Y iniziale del puntatore
+  let dragCurrentY = 0;      // Y corrente
+  let dragStartT   = 0;      // timestamp inizio — serve per la velocità
+  let sheetHeight  = 0;      // altezza del pannello, misurata all'inizio del drag
+
+  function onDragStart(e) {
+    // Ignoriamo il drag se parte dal bottone di chiusura (lì vince il click)
+    if (e.target.closest(".pdf-sheet-close")) return;
+
+    dragActive   = true;
+    dragStartY   = e.clientY;
+    dragCurrentY = e.clientY;
+    dragStartT   = e.timeStamp;
+    sheetHeight  = pdfSheet.offsetHeight;
+
+    pdfSheet.classList.add("dragging");      // disattiva la transition
+    pdfHeader.setPointerCapture(e.pointerId); // continua a ricevere eventi anche fuori dall'header
+  }
+
+  function onDragMove(e) {
+    if (!dragActive) return;
+    dragCurrentY = e.clientY;
+    let delta = dragCurrentY - dragStartY;
+
+    // Solo trascinamento verso il basso: delta negativo (verso l'alto) ignorato
+    if (delta < 0) delta = 0;
+
+    // Il pannello segue il dito
+    pdfSheet.style.transform = `translateY(${delta}px)`;
+  }
+
+  function onDragEnd(e) {
+    if (!dragActive) return;
+    dragActive = false;
+    pdfSheet.classList.remove("dragging");   // riattiva la transition per lo scatto finale
+
+    const delta    = Math.max(0, dragCurrentY - dragStartY);
+    const elapsed  = e.timeStamp - dragStartT;
+    const velocity = elapsed > 0 ? delta / elapsed : 0;  // px per millisecondo
+
+    // Chiude se: trascinato oltre il 35% dell'altezza OPPURE flick veloce
+    const passedDistance = delta > sheetHeight * 0.35;
+    const passedFlick    = velocity > 0.6 && delta > 40;
+
+    // Puliamo il transform inline: da qui in poi comanda di nuovo il CSS
+    pdfSheet.style.transform = "";
+
+    if (passedDistance || passedFlick) {
+      closePdfPanel();   // la classe .open viene tolta → il CSS anima la discesa
+    }
+    // se non chiude, rimuovendo il transform inline il pannello
+    // torna automaticamente su (translateY(0) della classe .open)
+  }
+
+  pdfHeader.addEventListener("pointerdown", onDragStart);
+  pdfHeader.addEventListener("pointermove", onDragMove);
+  pdfHeader.addEventListener("pointerup",   onDragEnd);
+  pdfHeader.addEventListener("pointercancel", onDragEnd);
 
   /* ───── AUTO-RESIZE TEXTAREA ───── */
   function autoResize(textarea) {
@@ -881,8 +1132,8 @@
         displayedText += chunk;
 
         // Render markdown del testo accumulato finora
-        activeBubble.innerHTML = marked.parse(displayedText);
-
+        const html = marked.parse(linkifyCitations(displayedText));
+        activeBubble.innerHTML = html;  
         // Auto-scroll solo se l'utente è già in fondo (non disturbare se sta leggendo sopra)
         const nearBottom = chatArea.scrollHeight - chatArea.scrollTop - chatArea.clientHeight < 100;
         if (nearBottom) {
@@ -920,6 +1171,51 @@
   function finishStream() {
     streamFinished = true;
   }
+  /* ───── CITAZIONI CLICCABILI ─────
+     L'LLM produce testo tipo "(Fonte: bilancio.pdf, pagina 12)" o
+     "(Fonti: a.pdf p.3, b.pdf p.7)". Lo trasformiamo in link che aprono
+     il pannello PDF. Trasformazione deterministica: il system prompt
+     resta invariato. */
+
+  // Nome file PA: lettere, numeri, _ . - (niente slash, niente "..").
+  const SAFE_PDF_NAME = /^(?!.*\.\.)[\w.\-]+\.pdf$/i;
+
+  function buildPdfLink(filename, page) {
+    const name = filename.trim();
+    if (!SAFE_PDF_NAME.test(name)) return null;  // nome sospetto → niente link
+    // I dati passano da attributi data-*; l'apertura è gestita da un listener
+    return `<a href="#" class="source-link" data-pdf="${name}" data-page="${page}">${name}, pagina ${page}</a>`;
+  }
+
+  function linkifyCitations(text) {
+    // Lavoriamo sul Markdown GREZZO (non sull'HTML): gli asterischi del
+    // grassetto sono prevedibili, i tag <strong> no.
+    // I nomi file PA contengono punti interni (es. "..._n._87-2025.pdf"),
+    // quindi il punto è ammesso nel set di caratteri del nome.
+    const refPattern =
+      /\*{0,2}([\w.\-]+\.pdf)\*{0,2}\s*,?\s*\*{0,2}\s*(?:pagina|pag\.?|p\.?)\s*(\d+)\*{0,2}/gi;
+
+    return text.replace(refPattern, (match, file, page) => {
+      const link = buildPdfLink(file.trim(), page);
+      return link || match;  // nome non valido → lascia il testo originale
+    });
+  }
+
+  // Delega unica: ogni click su .source-link apre il pannello.
+  // Funziona anche per i link creati durante lo streaming.
+  document.addEventListener("click", e => {
+
+    const link = e.target.closest(".source-link");
+  
+    if (!link) return;
+  
+    e.preventDefault();
+  
+    openPdfPanel(
+      link.dataset.pdf,
+      link.dataset.page
+    );
+  });
 
   /* ───── ACTIONS BUTTONS (Copia + Rigenera) ───── */
   function addCopyButton(msg, getText) {
