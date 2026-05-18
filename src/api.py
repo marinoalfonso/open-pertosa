@@ -14,62 +14,6 @@ load_dotenv()
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY")) # Inizializziamo il client OpenAI una volta sola
 
-def extract_financials_llm(text: str) -> dict:
-    """
-    Estrae dati finanziari da testo usando LLM.
-    Usata dal parser (NON dagli endpoint API).
-    """
-
-    text = text[:8000]  # limite sicurezza
-
-    prompt = f"""
-Estrai tutte le voci finanziarie dal testo.
-
-Restituisci SOLO JSON valido nel formato:
-{{ "voce": numero }}
-
-Regole:
-- Numeri in formato float (es: 120000.0)
-- Converti numeri italiani (120.000,00 → 120000.0)
-- Normalizza quando possibile (imu, tari, irpef, entrate, spese)
-- Mantieni anche voci non standard se presenti
-- NON aggiungere testo fuori dal JSON
-
-TESTO:
-{text}
-"""
-
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            temperature=0,
-            messages=[
-                {"role": "system", "content": "Esperto di bilanci pubblici italiani"},
-                {"role": "user", "content": prompt}
-            ]
-        )
-
-        content = response.choices[0].message.content.strip()
-
-        # pulizia markdown
-        content = content.replace("```json", "").replace("```", "").strip()
-
-        data = json.loads(content)
-
-        # validazione
-        cleaned = {}
-        for k, v in data.items():
-            try:
-                cleaned[k] = float(v)
-            except:
-                continue
-
-        return cleaned
-
-    except Exception as e:
-        print(f"⚠️ LLM financial extraction error: {e}")
-        return {}
-
 sys.path.append(str(Path(__file__).parent / "retrieval"))
 sys.path.append(str(Path(__file__).parent / "generation"))
 
