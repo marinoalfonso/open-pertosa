@@ -32,7 +32,7 @@ def retrieve(query: str) -> list[dict]:
     query_vector = response.data[0].embedding
 
     # Ricerca semantica in Qdrant
-    results = qdrant.search(
+    results = qdrant_client.search(
         collection_name=COLLECTION_NAME,
         query_vector=query_vector,
         limit=TOP_K,
