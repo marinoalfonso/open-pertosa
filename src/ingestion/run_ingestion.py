@@ -1,3 +1,4 @@
+import gc
 from pathlib import Path
 from parser import parse_pdf
 from chunker import chunk_pages
@@ -42,6 +43,8 @@ def main():
 
         total_chunks += len(chunks)
         print(f"  Completato: {pdf_path.name}")
+        
+        gc.collect()
 
     print(f"\nTotale chunk indicizzati: {total_chunks}")
     print("Ingestion completata.")
