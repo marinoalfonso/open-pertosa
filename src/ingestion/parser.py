@@ -186,5 +186,3 @@ def parse_pdf(pdf_path: str) -> list[dict]:
             print(f"  → {sostituite} pagine-tabella sostituite con Markdown")
 
     return pages
-
-    return pages
