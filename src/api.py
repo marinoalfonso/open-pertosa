@@ -18,6 +18,7 @@ sys.path.append(str(Path(__file__).parent / "retrieval"))
 sys.path.append(str(Path(__file__).parent / "generation"))
 
 from retriever import retrieve
+from query_rewriter import rewrite_query
 
 app = FastAPI(
     title="Assistente Comune di Pertosa",
@@ -90,7 +91,12 @@ def health_check():
 
 
 def stream_response(question: str, history: list = []):
-    chunks = retrieve(question)
+    # Riformuliamo la query per migliorare il retrieval: risolve i follow-up
+    # ("e per il 2018?") e normalizza il lessico colloquiale verso quello
+    # amministrativo. La domanda originale resta quella mostrata all'utente
+    # e quella che vede il modello di generazione — il rewriting è interno.
+    search_query = rewrite_query(question, history)
+    chunks = retrieve(search_query)
 
     context_parts = []
     for i, chunk in enumerate(chunks, 1):
