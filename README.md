@@ -280,6 +280,8 @@ Credenziali: `admin` / password definita in `monitoring/.env`
 
 ## Licenza
 
+Copyright (C) 2026 Alfonso Marino
+
 Rilasciato sotto licenza **GNU Affero General Public License v3.0 (AGPL-3.0)**, coerente con la licenza della dipendenza PyMuPDF.
 
 ---
