@@ -1,8 +1,8 @@
-import gc
 from pathlib import Path
 from parser import parse_pdf
-from chunker import chunk_pages
-from vectorizer import get_qdrant_client, create_collection_if_not_exists, embed_chunks, save_to_qdrant
+from normalizer import normalize_blocks
+from chunker import chunk_blocks
+from vectorizer import get_qdrant_client, create_collection_if_not_exists, embed_chunks, save_to_qdrant, recreate_collection
 
 DATA_DIR = Path("../../data/raw")
 
@@ -17,19 +17,22 @@ def main():
     print(f"Trovati {len(pdf_files)} PDF\n")
 
     qdrant = get_qdrant_client()
-    create_collection_if_not_exists(qdrant)
+    #create_collection_if_not_exists(qdrant)
+    recreate_collection(qdrant)
 
     total_chunks = 0
 
     for pdf_path in pdf_files:
         print(f"\nInizio processing: {pdf_path.name}")
-        pages = parse_pdf(str(pdf_path))
+        blocks = parse_pdf(str(pdf_path))
 
-        if not pages:
-            print(f"  Nessuna pagina estratta, salto.")
+        if not blocks:
+            print(f"  Nessun blocco estratto, salto.")
             continue
 
-        chunks = chunk_pages(pages)
+        blocks = normalize_blocks(blocks)
+
+        chunks = chunk_blocks(blocks)
 
         if not chunks:
             print(f"  Nessun chunk generato, salto.")
@@ -43,8 +46,6 @@ def main():
 
         total_chunks += len(chunks)
         print(f"  Completato: {pdf_path.name}")
-        
-        gc.collect()
 
     print(f"\nTotale chunk indicizzati: {total_chunks}")
     print("Ingestion completata.")
