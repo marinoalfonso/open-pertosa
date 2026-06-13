@@ -75,6 +75,18 @@ def _has_artifacts(text: str) -> bool:
     single_char_tokens = sum(1 for t in tokens if len(t) == 1 and t.isalpha())
     return (single_char_tokens / len(tokens)) > OCR_ARTIFACTS_RATIO
 
+def _extract_document_header(blocks: list[dict], max_words: int = 300) -> str:
+    """Prime ~max_words parole del documento, in ordine di pagina.
+    Serve al contextualizer per situare ogni chunk nel suo documento —
+    in particolare per gli allegati finanziari, dove il blocco-tabella è
+    povero di contesto e l'unico riferimento è l'intestazione."""
+    words = []
+    for block in sorted(blocks, key=lambda b: b["page"]):
+        words.extend(block["content"].split())
+        if len(words) >= max_words:
+            break
+    return " ".join(words[:max_words])
+
 
 def _pulisci_markdown_tabelle(text: str) -> str:
     """
@@ -326,5 +338,11 @@ def parse_pdf(pdf_path: str) -> list[dict]:
     print(f"  Strategie pagina: {strategy_counts}")
     print(f"  Blocchi: {len(blocks)} ({n_paras} paragrafi, {n_tables} tabelle)")
     print(f"  Caratteri totali: {total_chars}")
+    
+    # Intestazione del documento: estratta una volta e propagata a ogni
+    # blocco. Viaggia poi fino al contextualizer attraverso il chunker.
+    document_header = _extract_document_header(blocks)
+    for block in blocks:
+        block["document_header"] = document_header
 
     return blocks

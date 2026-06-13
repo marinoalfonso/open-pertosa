@@ -150,6 +150,7 @@ def chunk_blocks(blocks: list[dict], chunk_size: int = 1500,
                     "page": block["page"],
                     "chunk_index": len(chunks),
                     "type": btype,
+                    "document_header": block.get("document_header", "")
                 })
 
     return chunks
