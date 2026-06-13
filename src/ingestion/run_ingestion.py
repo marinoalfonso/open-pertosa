@@ -2,6 +2,7 @@ from pathlib import Path
 from parser import parse_pdf
 from normalizer import normalize_blocks
 from chunker import chunk_blocks
+from contextualizer import contextualize_chunks
 from vectorizer import get_qdrant_client, create_collection_if_not_exists, embed_chunks, save_to_qdrant, recreate_collection
 
 DATA_DIR = Path("../../data/raw")
@@ -39,6 +40,10 @@ def main():
             continue
 
         print(f"  Chunk generati: {len(chunks)}")
+        
+        #Contextual Retrieval: arricchiamo i chunk prima della vettorizzazione
+        chunks = contextualize_chunks(chunks)
+        
         print(f"  Vettorizzazione...")
 
         embedded = embed_chunks(chunks, batch_size=10)
