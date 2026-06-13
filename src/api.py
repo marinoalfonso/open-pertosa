@@ -88,9 +88,103 @@ class QueryRequest(BaseModel):
 def health_check():
     return {"status": "ok", "service": "Assistente Comune di Pertosa"}
 
+import re
+
+# Parole troppo comuni che non aggiungono significato
+STOPWORDS_IT = {
+    "il", "la", "lo", "i", "gli", "le", "un", "una", "uno",
+    "di", "a", "da", "in", "con", "su", "per", "tra", "fra",
+    "e", "o", "ma", "se", "che", "chi", "cosa", "come", "dove",
+    "quando", "quanto", "quale", "qual", "è", "sono", "ha", "ho"
+}
+
+# Indicatori che la query È GIÀ specifica al Comune o a un'entità chiara
+SPECIFIC_MARKERS = {
+    "pertosa", "comune", "comunale",
+    "tari", "imu", "tasi", "cosap", "tosap",  # tributi specifici
+    "delibera", "determina", "ordinanza",      # tipi atto
+    "bilancio", "pec", "stipendio"             # ricerche tecniche specifiche
+}
+# Nota: "pec" e "stipendio" NON sono marker di specificità,
+# ma di intent tecnico. Li tratto a parte.
+
+
+def _count_significant_words(query: str) -> int:
+    """Conta parole non-stopword nella query."""
+    words = re.findall(r"\b\w+\b", query.lower())
+    return sum(1 for w in words if w not in STOPWORDS_IT)
+
+
+def _is_query_specific(query: str) -> bool:
+    words_lower = set(re.findall(r"\b\w+\b", query.lower()))
+    has_comune_marker = bool(words_lower & {"pertosa", "comune", "comunale"})
+    has_tax_marker = bool(words_lower & {"tari", "imu", "tasi", "cosap", "tosap"})
+    return has_comune_marker or has_tax_marker
+
+
+def needs_rewriting(query: str, history: list) -> bool:
+    """Decide se la query è candidata all'espansione."""
+    sig_words = _count_significant_words(query)
+    
+    # Criterio principale: query breve E non specifica al Comune
+    if sig_words < 5 and not _is_query_specific(query):
+        return True
+    
+    # Criterio aggiuntivo: query con pronomi vaghi e nessuna history
+    pronouns = {"quanto", "quando", "chi", "cosa", "dove", "qual"}
+    words_lower = set(re.findall(r"\b\w+\b", query.lower()))
+    if (sig_words < 4 
+        and words_lower & pronouns 
+        and not history 
+        and not _is_query_specific(query)):
+        return True
+    
+    return False
+
+REWRITE_PROMPT = """Riformula questa domanda di un cittadino al Comune di Pertosa, rendendola esplicita.
+
+REGOLE:
+- Aggiungi "del Comune di Pertosa" solo se manca completamente un riferimento all'ente.
+- NON aggiungere informazioni che il cittadino non ha menzionato.
+- Mantieni la domanda concisa.
+
+Domanda originale: {query}
+
+Rispondi SOLO con la domanda riformulata, niente altro."""
+
+
+def expand_query(query: str, client: OpenAI) -> str:
+    """Espande la query con una chiamata LLM. Fallback alla query originale
+    in caso di errore."""
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": REWRITE_PROMPT.format(query=query)}],
+            max_tokens=80,
+            temperature=0
+        )
+        expanded = response.choices[0].message.content.strip()
+        # Sanity check: l'output non deve essere assurdamente lungo
+        if len(expanded) > 300 or not expanded:
+            return query
+        return expanded
+    except Exception as e:
+        print(f"[rewriter] errore: {e}")
+        return query
 
 def stream_response(question: str, history: list = []):
-    chunks = retrieve(question)
+    # ───── QUERY REWRITING CONDIZIONALE ─────
+    # Le query brevi e generiche (es. "qual è la PEC?") non hanno
+    # abbastanza segnali per un retrieval efficace. Le espandiamo
+    # esplicitando il contesto del Comune. Le query già specifiche
+    # passano intatte.
+    effective_query = question
+    if needs_rewriting(question, history):
+        effective_query = expand_query(question, client)
+        print(f"[rewriter] '{question}' → '{effective_query}'")
+
+    # Retrieval con la query espansa (se applicabile)
+    chunks = retrieve(effective_query)
 
     context_parts = []
     for i, chunk in enumerate(chunks, 1):
@@ -99,6 +193,9 @@ def stream_response(question: str, history: list = []):
         )
     context = "\n\n---\n\n".join(context_parts)
 
+    # Il modello vede la domanda ORIGINALE del cittadino, non quella
+    # riformulata: così la risposta resta in linea col tono di chi ha
+    # chiesto.
     user_message = f"""Contesto dai documenti ufficiali:
 
 {context}
@@ -107,16 +204,21 @@ def stream_response(question: str, history: list = []):
 
 Domanda del cittadino: {question}"""
 
-    #client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    # ───── INIEZIONE DATA ODIERNA NEL SYSTEM PROMPT ─────
+    # Permette al modello di interpretare correttamente espressioni
+    # come "attualmente", "ultimo mese", "recente".
+    from datetime import date
+    oggi = date.today().strftime("%d/%m/%Y")
+    system_with_date = SYSTEM_PROMPT + f"\n\nData odierna: {oggi}."
 
-    # Costruiamo i messaggi includendo la cronologia
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    # Costruzione messaggi per OpenAI
+    messages = [{"role": "system", "content": system_with_date}]
 
-    # Aggiungiamo i messaggi precedenti
+    # Cronologia conversazione
     for msg in history:
         messages.append({"role": msg.role, "content": msg.content})
 
-    # Aggiungiamo la domanda corrente con il contesto
+    # Domanda corrente con contesto recuperato
     messages.append({"role": "user", "content": user_message})
 
     stream = client.chat.completions.create(
