@@ -113,7 +113,7 @@ def embed_chunks(chunks: list[dict], batch_size: int = 20) -> list[dict]:
 
     for i in range(0, total, batch_size):
         batch = chunks[i:i + batch_size]
-        texts = [c["text"] for c in batch]
+        texts = [c.get("text_contextualized", c["text"]) for c in batch]
 
         print(f"  Embedding batch {i//batch_size + 1}/{-(-total//batch_size)}")
 
@@ -148,14 +148,11 @@ def save_to_qdrant(embedded_chunks: list[dict], qdrant: QdrantClient):
                 ),
             },
             payload={
-                "text": chunk["text"],
+                "text": chunk["text"],                    
+                "context": chunk.get("context", ""),      
                 "source": chunk["source"],
                 "page": chunk["page"],
-                "chunk_index": chunk["chunk_index"],
-                # Salviamo anche il tipo (paragraph/table): utile per debug
-                # e per un eventuale reranking futuro. Default "paragraph"
-                # per retrocompatibilità con chunk che non lo riportano.
-                "type": chunk.get("type", "paragraph"),
+                "chunk_index": chunk["chunk_index"]
             },
         ))
 
