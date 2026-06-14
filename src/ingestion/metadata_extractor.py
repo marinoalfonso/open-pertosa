@@ -132,20 +132,16 @@ _RE_DATA_TESTO = re.compile(
 _RE_DATA_GENERICA = re.compile(r"\b(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})\b")
 
 
-def _step2_data_dal_testo(document_header: str) -> tuple[str | None, int | None]:
-    """Cerca una data esplicita nel testo del documento. Privilegia il pattern
-    'Pertosa, lì DD/MM/YYYY'. Ritorna (data_iso, anno) oppure (None, None)."""
-
-    # Concentriamoci sulle prime e ultime righe: lì le date si trovano,
-    # nel corpo del documento ci sono altre date (es. scadenze, riferimenti)
-    # che NON sono la data dell'atto.
+def _step2_data_dal_testo(document_header: str, 
+                          expected_year: int | None = None) -> tuple[str | None, int | None]:
     snippet = document_header[:2000]
 
     for pattern in (_RE_DATA_TESTO, _RE_DATA_GENERICA):
-        m = pattern.search(snippet)
-        if m:
+        for m in pattern.finditer(snippet):
             gg, mm, aaaa = int(m.group(1)), int(m.group(2)), int(m.group(3))
             if 1 <= gg <= 31 and 1 <= mm <= 12 and 2000 <= aaaa <= 2030:
+                if expected_year is not None and aaaa != expected_year:
+                    continue
                 data_iso = f"{aaaa:04d}-{mm:02d}-{gg:02d}"
                 return data_iso, aaaa
 
@@ -226,10 +222,24 @@ def _step3_llm(document_header: str, client: OpenAI) -> dict:
 
 def extract_metadata(filename: str,
                      document_header: str,
-                     client: OpenAI = None) -> dict:
+                     client: OpenAI = None,
+                     parent_index: dict = None) -> dict:
     """Estrae i metadati di un documento usando la cascata in tre step.
-    L'LLM viene invocato solo se necessario."""
+    L'LLM viene invocato solo se necessario.
+    
+    Se il file è un allegato e parent_index contiene il suo padre,
+    i metadati TEMPORALI (data_atto, anno, data_precisione) sono ereditati 
+    dal padre. Il tipo_atto resta estratto autonomamente dall'allegato.
+    """
     log = []
+    
+    # ─── EREDITARIETÀ ALLEGATI ───
+    inherited_temporal = None
+    if parent_index and is_allegato(filename):
+        prefix = get_parent_prefix(filename)
+        if prefix and prefix in parent_index:
+            inherited_temporal = parent_index[prefix]
+            log.append(f"ereditarietà: dati temporali dal padre {prefix}")
 
     # ─── Step 1 ───
     s1 = _step1_nome_file(filename)
@@ -243,44 +253,174 @@ def extract_metadata(filename: str,
     data_atto = None
     data_precisione = "ignoto"
 
-    # ─── Step 2 — sempre eseguito per cercare la data esatta ───
-    data_iso, anno_dal_testo = _step2_data_dal_testo(document_header)
-    if data_iso:
-        data_atto = data_iso
-        anno = anno_dal_testo  # priorità all'anno del testo (più affidabile)
-        data_precisione = "giorno"
-        log.append(f"step2: data_atto={data_iso} (regex sul testo)")
-
+    # ─── Step 2: SOLO se non abbiamo dati ereditati dal padre ───
+    if inherited_temporal is None:
+        data_iso, anno_dal_testo = _step2_data_dal_testo(
+            document_header, 
+            expected_year=anno
+        )
+        if data_iso:
+            data_atto = data_iso
+            if anno is None:
+                anno = anno_dal_testo
+            data_precisione = "giorno"
+            log.append(f"step2: data_atto={data_iso} (regex sul testo)")
+    
     # ─── Step 3 — LLM solo se ancora mancano informazioni essenziali ───
-    serve_llm = (tipo_atto is None) or (data_atto is None and anno is None)
+    # Anche qui: skippa se abbiamo dati ereditati
+    serve_llm = (tipo_atto is None) or (
+        inherited_temporal is None and data_atto is None and anno is None
+    )
     if serve_llm:
         if client is None:
             client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         s3 = _step3_llm(document_header, client)
-
+        
         if tipo_atto is None and s3["tipo_atto"]:
             tipo_atto = s3["tipo_atto"]
             log.append(f"step3: tipo_atto={tipo_atto} (LLM)")
-
-        if data_atto is None and s3["data_atto"]:
+        
+        if inherited_temporal is None and data_atto is None and s3["data_atto"]:
             data_atto = s3["data_atto"]
             data_precisione = "giorno"
             if anno is None:
                 anno = int(s3["data_atto"][:4])
             log.append(f"step3: data_atto={data_atto} (LLM)")
 
+    # ─── Applica ereditarietà se presente (sovrascrive temporali) ───
+    if inherited_temporal is not None:
+        data_atto = inherited_temporal["data_atto"]
+        anno = inherited_temporal["anno"]
+        data_precisione = inherited_temporal["data_precisione"]
+
     # ─── Finalizzazione ───
     if tipo_atto is None:
         tipo_atto = "altro"
         log.append("fallback: tipo_atto=altro (nessuno step ha riconosciuto)")
 
-    if data_atto is None and anno is not None:
+    if data_atto is None and anno is not None and data_precisione == "ignoto":
         data_precisione = "anno"
 
     return {
         "tipo_atto": tipo_atto,
-        "data_atto": data_atto,           # ISO oppure None
-        "anno": anno,                      # intero oppure None
-        "data_precisione": data_precisione,  # "giorno" | "anno" | "ignoto"
+        "data_atto": data_atto,
+        "anno": anno,
+        "data_precisione": data_precisione,
         "extraction_log": " | ".join(log),
     }
+
+# ─────────────────────────────────────────────────────────────
+# COSTRUZIONE INDICE PADRI (per ereditarietà metadati negli allegati)
+# ─────────────────────────────────────────────────────────────
+
+_RE_ALLEGATO = re.compile(r"^(.+?)__allegato-", re.IGNORECASE)
+
+
+def is_allegato(filename: str) -> bool:
+    """Riconosce se un file è un allegato dal pattern di naming."""
+    return "__allegato-" in filename.lower()
+
+
+def get_parent_prefix(filename: str) -> str | None:
+    """Estrae il prefisso del documento padre da un nome di allegato.
+    Es: '0118_delibera_n._16-2026__allegato-01-piano.pdf'
+        → '0118_delibera_n._16-2026'
+    Restituisce None se il file non è un allegato."""
+    m = _RE_ALLEGATO.match(filename)
+    if m:
+        return m.group(1)
+    return None
+
+
+def build_parent_index(filenames: list[str],
+                       data_dir,
+                       parse_pdf_fn,
+                       client: OpenAI = None) -> dict:
+    """
+    Costruisce un indice dei metadati temporali per i documenti padre.
+    Solo i campi temporali (data_atto, anno, data_precisione) sono salvati.
+    
+    Per ciascun padre identificato:
+      - se è presente nel corpus, estrae i metadati dal suo contenuto
+      - se NON è presente, estrae solo dal nome (anno) e marca data_precisione="anno"
+    
+    Ritorna: dict {prefix_padre: {data_atto, anno, data_precisione}}
+    """
+    from pathlib import Path
+    
+    # Identifica i padri di cui abbiamo bisogno (cioè quelli referenziati 
+    # dagli allegati presenti nel corpus)
+    needed_parents = set()
+    for fn in filenames:
+        if is_allegato(fn):
+            prefix = get_parent_prefix(fn)
+            if prefix:
+                needed_parents.add(prefix)
+    
+    if not needed_parents:
+        print("  [parent_index] nessun allegato trovato, indice vuoto")
+        return {}
+    
+    print(f"  [parent_index] identificati {len(needed_parents)} padri da indicizzare")
+    
+    # Mappa: prefix → nome file effettivo del padre (se presente nel corpus)
+    # Es: '0118_delibera_n._16-2026' → '0118_delibera_n._16-2026.pdf'
+    filenames_set = set(filenames)
+    parent_to_file = {}
+    for prefix in needed_parents:
+        candidate = f"{prefix}.pdf"
+        if candidate in filenames_set:
+            parent_to_file[prefix] = candidate
+    
+    print(f"  [parent_index] padri presenti nel corpus: {len(parent_to_file)} su {len(needed_parents)}")
+    
+    if client is None:
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    
+    parent_index = {}
+    
+    # Caso A: padre presente nel corpus → estrazione completa
+    for prefix, parent_file in parent_to_file.items():
+        try:
+            parent_path = Path(data_dir) / parent_file
+            blocks = parse_pdf_fn(str(parent_path))
+            
+            if not blocks:
+                # Parser non ha estratto nulla, fallback solo sul nome
+                meta = extract_metadata(parent_file, "", client)
+            else:
+                header = blocks[0].get("document_header", "")
+                meta = extract_metadata(parent_file, header, client)
+            
+            parent_index[prefix] = {
+                "data_atto": meta["data_atto"],
+                "anno": meta["anno"],
+                "data_precisione": meta["data_precisione"],
+            }
+        except Exception as e:
+            print(f"  [parent_index] errore su padre {parent_file}: {e}")
+            # Fallback: estrai dal nome
+            meta = extract_metadata(parent_file, "", client)
+            parent_index[prefix] = {
+                "data_atto": meta["data_atto"],
+                "anno": meta["anno"],
+                "data_precisione": meta["data_precisione"],
+            }
+    
+    # Caso B: padre assente dal corpus → estrazione solo dal nome
+    missing_parents = needed_parents - set(parent_to_file.keys())
+    for prefix in missing_parents:
+        # Trattiamo il prefisso come un nome file fittizio per riusare le regex
+        pseudo_filename = f"{prefix}.pdf"
+        meta = extract_metadata(pseudo_filename, "", client)
+        parent_index[prefix] = {
+            "data_atto": meta["data_atto"],
+            "anno": meta["anno"],
+            "data_precisione": meta["data_precisione"],
+        }
+    
+    # Statistiche
+    with_data = sum(1 for v in parent_index.values() if v["data_atto"])
+    print(f"  [parent_index] {with_data}/{len(parent_index)} padri con data al giorno")
+    
+    return parent_index

@@ -145,12 +145,16 @@ def chunk_blocks(blocks: list[dict], chunk_size: int = 1500,
         for piece in pieces:
             if piece and len(piece) >= MIN_CHUNK_CHARS:
                 chunks.append({
-                    "text": piece,
-                    "source": block["source"],
-                    "page": block["page"],
-                    "chunk_index": len(chunks),
-                    "type": btype,
-                    "document_header": block.get("document_header", "")
-                })
+                "text": piece,
+                "source": block["source"],
+                "page": block["page"],
+                "chunk_index": len(chunks),
+                "type": btype,
+                "document_header": block.get("document_header", ""),
+                "tipo_atto": block.get("tipo_atto", "altro"),
+                "data_atto": block.get("data_atto"),
+                "anno": block.get("anno"),
+                "data_precisione": block.get("data_precisione", "ignoto"),
+            })
 
     return chunks

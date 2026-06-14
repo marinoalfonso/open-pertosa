@@ -148,11 +148,15 @@ def save_to_qdrant(embedded_chunks: list[dict], qdrant: QdrantClient):
                 ),
             },
             payload={
-                "text": chunk["text"],                    
-                "context": chunk.get("context", ""),      
+                "text": chunk["text"],
+                "context": chunk.get("context", ""),
                 "source": chunk["source"],
                 "page": chunk["page"],
-                "chunk_index": chunk["chunk_index"]
+                "chunk_index": chunk["chunk_index"],
+                "tipo_atto": chunk.get("tipo_atto", "altro"),
+                "data_atto": chunk.get("data_atto"),
+                "anno": chunk.get("anno"),
+                "data_precisione": chunk.get("data_precisione", "ignoto"),
             },
         ))
 

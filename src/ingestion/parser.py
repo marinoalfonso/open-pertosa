@@ -39,6 +39,7 @@ import re
 import fitz
 import pymupdf4llm
 from pathlib import Path
+from metadata_extractor import extract_metadata
 
 MIN_CHARS_PER_PAGE = 10
 OCR_ARTIFACTS_RATIO = 0.15
@@ -319,30 +320,41 @@ def _extract_blocks(pdf_path: str) -> tuple[list[dict], int, dict]:
 # API pubblica
 # ─────────────────────────────────────────────────────────────────────
 
-def parse_pdf(pdf_path: str) -> list[dict]:
+def parse_pdf(pdf_path: str, parent_index: dict = None) -> list[dict]:
     """
     Estrae un PDF in una lista di blocchi tipizzati (paragraph | table).
-
-    È l'unica funzione che il resto della pipeline deve conoscere.
+    parent_index, se fornito, è usato dal metadata_extractor per gestire 
+    l'ereditarietà nei file allegati.
     """
     path = Path(pdf_path)
     print(f"\nParsing: {path.name}")
-
     blocks, total_pages, strategy_counts = _extract_blocks(pdf_path)
-
     n_tables = sum(1 for b in blocks if b["type"] == "table")
     n_paras = sum(1 for b in blocks if b["type"] == "paragraph")
     total_chars = sum(len(b["content"]) for b in blocks)
-
     print(f"  Pagine: {total_pages} totali")
     print(f"  Strategie pagina: {strategy_counts}")
     print(f"  Blocchi: {len(blocks)} ({n_paras} paragrafi, {n_tables} tabelle)")
     print(f"  Caratteri totali: {total_chars}")
-    
-    # Intestazione del documento: estratta una volta e propagata a ogni
-    # blocco. Viaggia poi fino al contextualizer attraverso il chunker.
+
+    # Propagazione document_header
     document_header = _extract_document_header(blocks)
     for block in blocks:
         block["document_header"] = document_header
+
+    # Estrazione metadati (con ereditarietà se parent_index disponibile)
+    if blocks:
+        metadata = extract_metadata(
+            path.name, 
+            document_header, 
+            parent_index=parent_index  # ← nuovo: passa l'indice se disponibile
+        )
+        for block in blocks:
+            block["tipo_atto"] = metadata["tipo_atto"]
+            block["data_atto"] = metadata["data_atto"]
+            block["anno"] = metadata["anno"]
+            block["data_precisione"] = metadata["data_precisione"]
+        print(f"  Metadati: tipo={metadata['tipo_atto']}, "
+              f"data={metadata['data_atto']}, anno={metadata['anno']}")
 
     return blocks
