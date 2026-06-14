@@ -42,8 +42,7 @@ Rispondi alle domande dei cittadini basandoti sui documenti ufficiali del Comune
 
 ## Uso dei documenti e della conversazione
 - Per qualsiasi informazione specifica del Comune di Pertosa (cifre, date, nomi, delibere, regolamenti, decisioni amministrative), basati esclusivamente sui documenti forniti nel contesto.
-- La cronologia della conversazione serve solo a capire a cosa si riferisce una domanda di follow-up (es. capire cosa intende "e per il 2027?"). 
-  Il dato richiesto va comunque sempre cercato nei documenti, mai ricostruito a memoria dalla conversazione.
+- Per domande di follow-up, puoi usare la cronologia del dialogo.
 - Se l'informazione non è presente nei documenti né ricavabile dalla conversazione, rispondi esattamente:
   "Non ho trovato informazioni sufficienti nei documenti disponibili."
 
@@ -51,6 +50,23 @@ Rispondi alle domande dei cittadini basandoti sui documenti ufficiali del Comune
 - Il contesto può contenere tabelle in formato Markdown (righe e colonne separate da | con una riga di intestazione).
 - Prima di riportare un valore da una tabella, individua con certezza SIA la riga SIA la colonna corrette. Non confondere un valore totale o di riepilogo con una voce specifica.
 - Se non riesci a identificare con sicurezza a quale riga e colonna appartiene un valore, non riportarlo: è preferibile non dare quel dato piuttosto che darne uno incerto.
+
+## Regole temporali
+- I documenti forniti potrebbero essere stati selezionati con filtri 
+  temporali (es. ultimi 6 mesi, anno specifico): basati su quanto vedi
+  in essi, considerando la data odierna fornita più in basso.
+- Quando la domanda contiene "attualmente", "in corso", "ultimo", "recente":
+  * cita esplicitamente la data dell'atto a cui ti riferisci
+  * se nei chunk vedi più atti con date diverse, scegli quello con data
+    più vicina ad oggi
+  * se la domanda riguarda lo STATO di un lavoro o procedimento (es. "in
+    corso", "ancora aperto", "concluso") e i documenti non ti permettono
+    di confermare lo stato corrente, dichiaralo onestamente: indica la
+    data dell'atto più recente di cui hai notizia, e suggerisci al
+    cittadino di consultare gli uffici comunali per informazioni
+    aggiornate.
+- Quando la domanda specifica un anno (es. "nel 2024"), considera solo i
+  documenti di quell'anno presenti nel contesto.
 
 ## Citazione delle fonti
 - Cita SEMPRE le fonti da cui ricavi le informazioni, a fine risposta, andando a capo.
@@ -188,9 +204,17 @@ def stream_response(question: str, history: list = []):
 
     context_parts = []
     for i, chunk in enumerate(chunks, 1):
-        context_parts.append(
-            f"[Fonte {i}: {chunk['source']}, pagina {chunk['page']}]\n{chunk['text']}"
-        )
+        # Costruzione header del chunk con metadati temporali quando disponibili
+        header_parts = [f"Fonte {i}: {chunk['source']}, pagina {chunk['page']}"]
+        if chunk.get("data_atto"):
+            header_parts.append(f"data atto: {chunk['data_atto']}")
+        elif chunk.get("anno"):
+            header_parts.append(f"anno: {chunk['anno']}")
+        if chunk.get("tipo_atto") and chunk["tipo_atto"] != "altro":
+            header_parts.append(f"tipo: {chunk['tipo_atto']}")
+        header = " | ".join(header_parts)
+
+        context_parts.append(f"[{header}]\n{chunk['text']}")
     context = "\n\n---\n\n".join(context_parts)
 
     # Il modello vede la domanda ORIGINALE del cittadino, non quella
