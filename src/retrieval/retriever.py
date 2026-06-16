@@ -247,6 +247,22 @@ def retrieve(query: str) -> list[dict]:
     )
 
     raw_points = response.points
+    
+    # Se il filtro azzera i risultati, ritenta senza filtro.
+    if query_filter and not raw_points:
+        print("[retrieval] filtro → 0 candidati, retry SENZA filtro")
+        response = qdrant_client.query_points(
+            collection_name=COLLECTION_NAME,
+            prefetch=[
+                Prefetch(query=dense_query, using=DENSE_VECTOR_NAME, limit=PREFETCH_LIMIT),
+                Prefetch(query=sparse_query, using=SPARSE_VECTOR_NAME, limit=PREFETCH_LIMIT),
+            ],
+            query=FusionQuery(fusion=Fusion.RRF),
+            limit=FETCH_BEFORE_DIVERSIFY,
+            with_payload=True,
+        )
+        raw_points = response.points
+        query_filter = None
 
     # ── Diversificazione per documento ──
     if DIVERSIFY_ENABLED:
