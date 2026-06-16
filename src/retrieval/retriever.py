@@ -176,11 +176,18 @@ def _detect_temporal_intent(query: str) -> dict:
         "tipo_atto": None,
     }
 
-    m = _RE_ANNO_QUERY.search(query)
-    if m:
-        anno = int(m.group(1))
-        if 2000 <= anno <= 2030:
-            intent["year"] = anno
+    # Rilevamento anni nella query. Uso findall (non search) per contarli
+    # tutti: se la query cita DUE o più anni è un confronto ("tra il 2023
+    # e il 2024", "dal 2022 al 2024") e gli anni sono CONTENUTO della
+    # domanda, non un vincolo sulla data dell'atto → niente filtro per anno
+    # (il documento giusto, es. un consuntivo, ha spesso data dell'anno dopo).
+    anni_validi = [int(a) for a in _RE_ANNO_QUERY.findall(query) if 2000 <= int(a) <= 2030]
+
+    if len(anni_validi) == 1:
+        intent["year"] = anni_validi[0]
+    # 0 anni → nessun filtro per anno (come prima)
+    # 2+ anni → confronto → nessun filtro per anno; gli anni restano nella
+    #           query e lavorano sul contenuto tramite la ricerca semantica
 
     # Cerco la chiave più lunga che matcha (per gestire "delibera di giunta"
     # prima di "delibera")
