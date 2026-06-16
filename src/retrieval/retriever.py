@@ -88,6 +88,81 @@ TIPO_ATTO_KEYWORDS = {
     "avvisi": "bando_avviso",
 }
 
+import re as _re_num
+
+def _retrieve_most_recent_by_tipo(tipo_atto: str, top_k: int = TOP_K) -> list[dict]:
+    """
+    Percorso dedicato alle domande 'ultima/più recente <tipo>'.
+    Non usa rilevanza semantica: prende da Qdrant TUTTI i chunk di quel
+    tipo_atto, individua il documento con data_atto massima (tie-break sul
+    numero di atto nel nome file), e restituisce i suoi chunk.
+    Deterministico, zero costo API.
+    """
+    # Scroll di tutti i chunk del tipo richiesto (niente embedding)
+    points = []
+    offset = None
+    while True:
+        batch, offset = qdrant_client.scroll(
+            collection_name=COLLECTION_NAME,
+            scroll_filter=Filter(must=[
+                FieldCondition(key="tipo_atto", match=MatchValue(value=tipo_atto))
+            ]),
+            limit=256,
+            offset=offset,
+            with_payload=True,
+            with_vectors=False,
+        )
+        points.extend(batch)
+        if offset is None:
+            break
+
+    if not points:
+        return []
+
+    # Estrae il numero dell'atto dal nome file (es. "..._n._20-2026..." → 20)
+    def _num_atto(source: str) -> int:
+        m = _re_num.search(r"_n\._(\d+)-", source)
+        return int(m.group(1)) if m else 0
+
+    # Chiave di ordinamento per individuare l'atto "più recente":
+    # prima la data, poi il numero come spareggio a pari data.
+    def _key(p):
+        return (p.payload.get("data_atto") or "0000-00-00", _num_atto(p.payload.get("source", "")))
+
+    # Il documento vincente è quello del chunk con chiave massima
+    winner = max(points, key=_key)
+    win_data = winner.payload.get("data_atto")
+    win_num = _num_atto(winner.payload.get("source", ""))
+
+    # Tengo tutti i chunk che appartengono a QUELL'atto (stessa data + stesso numero).
+    # Nota: includo anche gli allegati dello stesso atto, che condividono
+    # data e numero nel nome file.
+    selected = [
+        p for p in points
+        if (p.payload.get("data_atto") or "0000-00-00") == win_data
+        and _num_atto(p.payload.get("source", "")) == win_num
+    ]
+
+    # Ordino i chunk dell'atto per pagina, così il modello legge in ordine
+    selected.sort(key=lambda p: (p.payload.get("source", ""), p.payload.get("page", 0)))
+    selected = selected[:top_k]
+
+    chunks = []
+    for r in selected:
+        chunks.append({
+            "text": r.payload["text"],
+            "source": r.payload["source"],
+            "page": r.payload["page"],
+            "type": r.payload.get("type", "paragraph"),
+            "score": 1.0,  # percorso deterministico, non c'è uno score di similarità
+            "data_atto": r.payload.get("data_atto"),
+            "anno": r.payload.get("anno"),
+            "tipo_atto": r.payload.get("tipo_atto"),
+        })
+
+    print(f"\n[retrieval] PERCORSO most_recent diretto: tipo={tipo_atto} "
+          f"→ atto n.{win_num} del {win_data} ({len(chunks)} chunk)")
+    return chunks
 
 def _detect_temporal_intent(query: str) -> dict:
     """Analizza la query e individua intenti temporali e di tipologia.
@@ -206,6 +281,11 @@ def retrieve(query: str) -> list[dict]:
 
     # ── Analisi della query: intenti temporali e di tipologia ──
     intent = _detect_temporal_intent(query)
+    # ── Percorso dedicato: 'ultima/più recente <tipo>' ──
+    # Solo quando c'è un tipo_atto preciso: senza tipo non sapremmo
+    # "il più recente di cosa", quindi lasciamo lavorare la ricerca normale.
+    if intent["most_recent"] and intent["tipo_atto"]:
+        return _retrieve_most_recent_by_tipo(intent["tipo_atto"])
     query_filter = _build_qdrant_filter(intent)
 
     if query_filter or intent["most_recent"]:
