@@ -1199,20 +1199,36 @@
     });
   }
 
-  // Delega unica: ogni click su .source-link apre il pannello.
-  // Funziona anche per i link creati durante lo streaming.
+  // Delega unica: ogni click su .source-link apre la fonte.
+  // Su desktop usiamo il pannello sheet (il viewer dentro iframe
+  // rispetta #page=N). Su mobile il viewer di sistema dentro iframe
+  // ignora il fragment, quindi apriamo in nuova scheda: il viewer
+  // fullscreen rispetta #page=N più spesso e l'utente ha comunque
+  // accesso all'intero documento.
   document.addEventListener("click", e => {
 
     const link = e.target.closest(".source-link");
-  
+
     if (!link) return;
-  
+
     e.preventDefault();
-  
-    openPdfPanel(
-      link.dataset.pdf,
-      link.dataset.page
-    );
+
+    const filename = link.dataset.pdf;
+    const page = link.dataset.page;
+
+    // Dispositivi a puntatore impreciso = touch (smartphone, tablet).
+    // Più affidabile della detection per user-agent o per larghezza schermo.
+    const isMobile = window.matchMedia("(pointer: coarse)").matches;
+
+    if (isMobile) {
+      window.open(
+        `/docs/${encodeURIComponent(filename)}#page=${page || 1}`,
+        "_blank",
+        "noopener"
+      );
+    } else {
+      openPdfPanel(filename, filename, page);  // pannello sheet (desktop)
+    }
   });
 
   /* ───── ACTIONS BUTTONS (Copia + Rigenera) ───── */
