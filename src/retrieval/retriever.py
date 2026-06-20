@@ -5,7 +5,7 @@ from openai import OpenAI
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Prefetch, FusionQuery, Fusion, SparseVector,
-    Filter, FieldCondition, Range, MatchValue, DatetimeRange,
+    Filter, FieldCondition, Range, MatchValue, MatchAny, DatetimeRange,
 )
 from fastembed import SparseTextEmbedding
 from dotenv import load_dotenv
@@ -65,6 +65,32 @@ KEYWORDS_RECENT = {
 KEYWORDS_MOST_RECENT = {
     "più recente", "piu recente", "ultima", "ultimo", "ultimi", "ultime",
 }
+
+# ── Vocabolario fiscale-contabile ──
+# Quando una di queste parole compare insieme a un anno N nella query,
+# allarghiamo il filtro temporale alla finestra {N-1, N, N+1}. Motivo:
+# nella contabilità pubblica esiste uno sfasamento strutturale tra
+# esercizio finanziario e data dell'atto che lo approva:
+#   - il rendiconto/consuntivo dell'esercizio N si approva in N+1
+#   - il bilancio di previsione dell'esercizio N si approva in N-1
+#   - assestamenti, variazioni, equilibri possono cadere in entrambe le direzioni
+# Vocabolario chiuso del dominio: non cresce nel tempo.
+KEYWORDS_FISCAL = {
+    "bilancio", "bilanci",
+    "rendiconto", "rendiconti",
+    "consuntivo", "consuntivi",
+    "previsione", "previsioni",
+    "avanzo", "avanzi",
+    "disavanzo", "disavanzi",
+    "equilibri",
+    "assestamento", "assestamenti",
+}
+
+# Match su parole intere: "bilancio" non scatta dentro "ribilanciamento"
+_RE_FISCAL = re.compile(
+    r"\b(" + "|".join(KEYWORDS_FISCAL) + r")\b",
+    re.IGNORECASE,
+)
 
 _RE_ANNO_QUERY = re.compile(r"\b(20\d{2})\b")
 
@@ -174,6 +200,7 @@ def _detect_temporal_intent(query: str) -> dict:
         "most_recent": any(kw in query_lower for kw in KEYWORDS_MOST_RECENT),
         "year": None,
         "tipo_atto": None,
+        "fiscal_window": False,
     }
 
     # Rilevamento anni nella query. Uso findall (non search) per contarli
@@ -197,6 +224,12 @@ def _detect_temporal_intent(query: str) -> dict:
             intent["tipo_atto"] = TIPO_ATTO_KEYWORDS[kw]
             break
 
+    # Finestra fiscale: ha senso solo se c'è effettivamente un anno da espandere
+    intent["fiscal_window"] = (
+        intent["year"] is not None
+        and bool(_RE_FISCAL.search(query))
+    )
+    
     return intent
 
 
@@ -215,10 +248,19 @@ def _build_qdrant_filter(intent: dict) -> Filter | None:
 
     # Anno specifico
     if intent["year"] is not None:
-        must.append(FieldCondition(
-            key="anno",
-            match=MatchValue(value=intent["year"])
-        ))
+        if intent.get("fiscal_window"):
+            # Espansione N-1, N, N+1 per coprire lo sfasamento esercizio/atto
+            # tipico dei bilanci e dei loro atti collegati.
+            n = intent["year"]
+            must.append(FieldCondition(
+                key="anno",
+                match=MatchAny(any=[n - 1, n, n + 1])
+            ))
+        else:
+            must.append(FieldCondition(
+                key="anno",
+                match=MatchValue(value=intent["year"])
+            ))
 
     # Tipo atto menzionato esplicitamente
     if intent["tipo_atto"] is not None:
