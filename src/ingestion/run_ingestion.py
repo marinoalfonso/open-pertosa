@@ -9,8 +9,9 @@ from vectorizer import (
     embed_chunks,
     save_to_qdrant,
     recreate_collection,
+    is_already_indexed, 
 )
-from metadata_extractor import build_parent_index  # ← nuovo
+from metadata_extractor import build_parent_index
 
 DATA_DIR = Path("../../data/raw")
 
@@ -25,7 +26,7 @@ def main():
     print(f"Trovati {len(pdf_files)} PDF\n")
 
     qdrant = get_qdrant_client()
-    recreate_collection(qdrant)
+    create_collection_if_not_exists(qdrant)
 
     # ─── Pre-scan: costruzione indice padri per ereditarietà allegati ───
     print("Costruzione indice padri...")
@@ -40,6 +41,9 @@ def main():
     total_chunks = 0
 
     for pdf_path in pdf_files:
+        if is_already_indexed(qdrant, pdf_path.name):
+            print(f"  [SKIP] {pdf_path.name} già indicizzato")
+            continue
         print(f"\nInizio processing: {pdf_path.name}")
         blocks = parse_pdf(str(pdf_path), parent_index=parent_index)
 

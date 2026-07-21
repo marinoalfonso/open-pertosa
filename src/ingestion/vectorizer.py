@@ -4,6 +4,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Distance, VectorParams, PointStruct,
     SparseVectorParams, SparseVector, Modifier,
+    Filter, FieldCondition, MatchValue,
 )
 from fastembed import SparseTextEmbedding
 from dotenv import load_dotenv
@@ -48,6 +49,16 @@ def get_qdrant_client():
     port = int(os.getenv("QDRANT_PORT", "6333"))
     return QdrantClient(host=host, port=port)
 
+def is_already_indexed(qdrant: QdrantClient, source: str) -> bool:
+    """True se esistono già chunk di questo file in Qdrant."""
+    res = qdrant.count(
+        collection_name=COLLECTION_NAME,
+        count_filter=Filter(must=[
+            FieldCondition(key="source", match=MatchValue(value=source))
+        ]),
+        exact=True,
+    )
+    return res.count > 0
 
 def create_collection_if_not_exists(qdrant: QdrantClient):
     """
